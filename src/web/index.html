@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>loopaal · operations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="nav">
+    <a class="wordmark" href="#top">loopaal</a>
+    <button class="search-pill" id="search-open" aria-label="Open command palette"><span>Search actions</span><kbd>Ctrl K</kbd></button>
+    <div class="nav-status"><span class="signal" aria-hidden="true"></span><span id="mode-label">checking</span></div>
+  </header>
+
+  <main id="top">
+    <section class="intro">
+      <div><p class="kicker">BUSINESS OPERATIONS · SUPERVISED</p><h1>Set the target.<br>Review the exceptions.</h1></div>
+      <div class="intro-copy"><p>loopaal coordinates research, memory, outreach, replies, and website changes. Routine work moves through small specialist workers; consequential actions wait in one approval queue.</p><button class="btn primary" data-action="new-campaign">Create campaign</button></div>
+    </section>
+
+    <section class="workbench" aria-labelledby="workbench-title">
+      <div class="section-head"><div><h2 id="workbench-title">Operations workbench</h2><p>Live state from the local control plane.</p></div><button class="btn" id="refresh">Refresh</button></div>
+      <div class="metrics" id="metrics" aria-live="polite"></div>
+      <div class="bench-grid">
+        <article class="panel panel-wide"><header><h3>Campaigns</h3><span>criteria remain editable</span></header><div id="campaigns" class="rows"></div></article>
+        <article class="panel"><header><h3>Approvals</h3><span>human checkpoint</span></header><div id="approvals" class="rows"></div></article>
+        <article class="panel panel-tall"><header><h3>Prospects</h3><span>verified facts first</span></header><div id="prospects" class="rows"></div></article>
+        <article class="panel panel-dark"><header><h3>Workers</h3><span>small, bounded roles</span></header><ol class="workers"><li><b>Researcher</b><span>public facts and contacts</span></li><li><b>Analyst</b><span>fit and confidence</span></li><li><b>Writer</b><span>adaptive outreach</span></li><li><b>Responder</b><span>reply triage</span></li><li><b>Archivist</b><span>sheets, drive, memory</span></li></ol></article>
+        <article class="panel panel-wide"><header><h3>Activity</h3><span>audit trail</span></header><div id="activity" class="rows"></div></article>
+      </div>
+    </section>
+  </main>
+
+  <footer><span>loopaal · local control plane</span><span id="integration-line">integrations checking</span></footer>
+
+  <dialog id="campaign-dialog"><form id="campaign-form"><header><h2>Create campaign</h2><button type="button" class="icon-btn" data-close aria-label="Close">×</button></header><label>Campaign name<input name="name" required placeholder="Pakistan architecture outreach"></label><label>Business names<textarea name="businessNames" required placeholder="One name per line"></textarea></label><div class="form-grid"><label>Industries<input name="industries" placeholder="Architecture, construction"></label><label>Countries<input name="countries" placeholder="Pakistan, UAE"></label></div><label>Decision makers<input name="decisionMakers" placeholder="Founder, Managing Director"></label><label>Your offer<textarea name="offer" placeholder="What useful outcome can you provide?"></textarea></label><label>Instructions<textarea name="notes" placeholder="Evidence, exclusions, voice, constraints"></textarea></label><p class="form-status" id="campaign-status"></p><div class="dialog-actions"><button type="button" class="btn" data-close>Cancel</button><button class="btn primary" type="submit">Create campaign</button></div></form></dialog>
+
+  <dialog id="cmdk"><form method="dialog" class="cmdk-shell"><label>Find an action<input id="cmdk-input" autocomplete="off" placeholder="Type a command"></label><div class="command-list"><button value="new" data-command="new-campaign">Create campaign <kbd>N</kbd></button><button value="refresh" data-command="refresh">Refresh state <kbd>R</kbd></button></div><p><kbd>Esc</kbd> close · <kbd>Enter</kbd> select</p></form></dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body></html>
