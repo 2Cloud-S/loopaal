@@ -16,6 +16,9 @@ Set the variables from `.env.example`, especially:
 - `AWS_REGION`
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
+- `AI_PROVIDER=gemini`
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL=gemini-2.5-flash`
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
 

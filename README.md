@@ -12,7 +12,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. With `LOOPAAL_STORE=demo`, loopaal uses local demo persistence. With `LOOPAAL_STORE=dynamodb` and AWS credentials, it writes to DynamoDB.
+Open `http://localhost:3000`. With `LOOPAAL_STORE=demo`, loopaal uses local demo persistence. With `LOOPAAL_STORE=dynamodb` and AWS credentials, it writes to DynamoDB. Set `AI_PROVIDER=gemini` with `GEMINI_API_KEY` for Gemini-powered drafts, or leave `AI_PROVIDER=demo` for deterministic demo copy.
 
 ## Hackathon docs
 

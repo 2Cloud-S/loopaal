@@ -19,6 +19,26 @@ export async function askOpenAI(instructions: string, input: string, webSearch =
   return data.output_text || "";
 }
 
+export async function askGemini(instructions: string, input: string) {
+  if (!config.ai.geminiApiKey || !config.ai.geminiModel) return "";
+  const data = await checked(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(config.ai.geminiModel)}:generateContent?key=${encodeURIComponent(config.ai.geminiApiKey)}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: instructions }] },
+      contents: [{ role: "user", parts: [{ text: input }] }],
+      generationConfig: { temperature: 0.35 }
+    })
+  }) as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  return data.candidates?.[0]?.content?.parts?.map(part => part.text || "").join("").trim() || "";
+}
+
+export async function askAI(instructions: string, input: string, webSearch = false) {
+  if (config.ai.provider === "gemini") return askGemini(instructions, input);
+  if (config.ai.provider === "openai") return askOpenAI(instructions, input, webSearch);
+  return "";
+}
+
 export async function sendGmail(to: string, subject: string, body: string) {
   if (!config.google.token || !config.google.sender || !to) return { mode: "demo", channel: "gmail", to, subject };
   const mime = `From: ${config.google.sender}\r\nTo: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;

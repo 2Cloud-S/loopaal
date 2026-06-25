@@ -4,7 +4,7 @@ import { audit, makeId, nowIso } from "./ids.ts";
 import { recall } from "./memory.ts";
 import { outboundRisk } from "./policies.ts";
 import { loadState, newWorkerJob, remember, saveApproval, saveCampaign, saveRunArtifacts, setCampaignStatus, updateApproval } from "./repository.ts";
-import { sendGmail, sendWhatsApp, updateWebsite } from "./adapters.ts";
+import { askAI, sendGmail, sendWhatsApp, updateWebsite } from "./adapters.ts";
 import type { Approval, Campaign, MemoryItem, Prospect, WorkerJob } from "../types.ts";
 
 export async function createCampaign(name: string, raw: Record<string, unknown>) {
@@ -40,18 +40,59 @@ export async function draftOutreach(prospectId: string, channel: "gmail" | "what
   if (!prospect) throw new Error("Prospect not found");
   const campaign = state.campaigns.find(x => x.id === prospect.campaignId);
   if (!campaign) throw new Error("Campaign not found");
-  const body = channel === "gmail"
+  const fallbackBody = channel === "gmail"
     ? `Hello,\n\nI noticed ${prospect.businessName} fits the campaign focus around ${prospect.industry || "your sector"}. ${campaign.criteria.offer || "I have a practical idea that may be relevant to your team."}\n\nWould a short conversation be useful?\n`
     : `Hello — I noticed ${prospect.businessName} fits a current campaign focus. ${campaign.criteria.offer || "I have a practical idea that may be relevant."} Would a short conversation be useful?`;
+  const fallbackSubject = `A practical idea for ${prospect.businessName}`;
+  const generated = await generateOutreachDraft(campaign, prospect, channel);
+  const body = generated.body || fallbackBody;
+  const subject = generated.subject || fallbackSubject;
   const payload = {
     prospectId: prospect.id,
     to: channel === "gmail" ? prospect.email || "" : prospect.phone || "",
-    subject: channel === "gmail" ? `A practical idea for ${prospect.businessName}` : undefined,
+    subject: channel === "gmail" ? subject : undefined,
     body
   };
   const now = nowIso();
   const approval: Approval = { id: makeId("apr"), kind: channel === "gmail" ? "email" : "whatsapp", status: "pending", title: `${channel} · ${prospect.businessName}`, payload, createdAt: now, updatedAt: now };
   return saveApproval(approval);
+}
+
+async function generateOutreachDraft(campaign: Campaign, prospect: Prospect, channel: "gmail" | "whatsapp") {
+  const prompt = [
+    "Write supervised B2B outreach for Loopaal.",
+    "Use only the provided prospect and campaign facts. Do not invent revenue, clients, contact names, awards, or pain points.",
+    "Keep it concise, credible, and low-pressure. No spam wording, fake urgency, or exaggerated claims.",
+    channel === "gmail"
+      ? "Return strict JSON only with string fields: subject, body."
+      : "Return strict JSON only with string field: body."
+  ].join(" ");
+  const input = JSON.stringify({
+    channel,
+    campaign: { name: campaign.name, criteria: campaign.criteria },
+    prospect: {
+      businessName: prospect.businessName,
+      industry: prospect.industry,
+      country: prospect.country,
+      contactName: prospect.contactName,
+      contactRole: prospect.contactRole,
+      website: prospect.website,
+      confidence: prospect.confidence,
+      facts: prospect.facts,
+      sources: prospect.sources
+    }
+  });
+  try {
+    const text = await askAI(prompt, input);
+    const cleaned = text.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
+    const parsed = JSON.parse(cleaned || "{}") as { subject?: unknown; body?: unknown };
+    return {
+      subject: typeof parsed.subject === "string" ? parsed.subject.trim() : "",
+      body: typeof parsed.body === "string" ? parsed.body.trim() : ""
+    };
+  } catch {
+    return { subject: "", body: "" };
+  }
 }
 
 export async function approveAction(id: string, scheduledFor?: string) {

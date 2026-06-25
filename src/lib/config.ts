@@ -2,9 +2,23 @@ function yes(value: string | undefined, fallback = false) {
   return value === undefined ? fallback : value.toLowerCase() === "true";
 }
 
+function aiProvider() {
+  const configured = (process.env.AI_PROVIDER || "").toLowerCase();
+  if (configured === "gemini" || configured === "openai" || configured === "demo") return configured;
+  if (process.env.GEMINI_API_KEY) return "gemini";
+  if (process.env.OPENAI_API_KEY) return "openai";
+  return "demo";
+}
+
 export const config = {
   store: process.env.LOOPAAL_STORE || "demo",
   tableName: process.env.LOOPAAL_TABLE_NAME || "loopaal-h0",
+  ai: {
+    provider: aiProvider(),
+    geminiApiKey: process.env.GEMINI_API_KEY || "",
+    geminiModel: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+    geminiProject: process.env.GEMINI_PROJECT || ""
+  },
   aws: {
     region: process.env.AWS_REGION || "us-east-1",
     accessKeyId: process.env.AWS_ACCESS_KEY_ID || "",
@@ -46,6 +60,8 @@ export function integrationStatus() {
   return {
     store: useDynamoDb() ? "dynamodb" : "demo",
     dynamodb: useDynamoDb(),
+    aiProvider: config.ai.provider,
+    gemini: Boolean(config.ai.geminiApiKey && config.ai.geminiModel),
     openai: Boolean(config.openai.apiKey && config.openai.model),
     sheets: Boolean(config.google.token && config.google.sheetId),
     drive: Boolean(config.google.token && config.google.driveFolderId),

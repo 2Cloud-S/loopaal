@@ -5,6 +5,7 @@
 - Frontend and API: Next.js App Router on Vercel.
 - Language: TypeScript.
 - Database: AWS DynamoDB single-table design.
+- AI provider: configurable provider adapter with Gemini, OpenAI, and deterministic demo fallback.
 - Worker ecosystem: separate local package intended to become the `workers` GitHub repo/submodule.
 
 ## Core API surface
@@ -25,6 +26,7 @@
 - Demo mode uses a local JSON file so judges can run the project without credentials.
 - All state mutations must create audit events.
 - Failed workers must create visible audit entries instead of failing the whole run.
+- Draft generation must fall back to deterministic copy if an AI provider is unavailable.
 
 ## Safety requirements
 
