@@ -17,7 +17,9 @@
   --color-focus: oklch(48% 0.22 256);
   --color-error: oklch(52% 0.19 25);
   --color-success: oklch(45% 0.13 150);
+  --color-success-light: oklch(78% 0.12 150);
   --color-overlay: oklch(18% 0.015 258 / 0.46);
+  --color-shadow: oklch(10% 0.02 258 / 0.18);
   --font-display: "Space Grotesk", "Trebuchet MS", sans-serif;
   --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", "Cascadia Code", monospace;

@@ -3,8 +3,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "loopaal · H0 revenue-ops co-workers",
-  description: "A supervised AI revenue-ops agent with parallel co-workers, DynamoDB memory, and approval-gated outreach."
+  title: "loopaal · supervised revenue co-workers",
+  description: "Supervised AI co-workers for B2B research, outreach, memory, approvals, and client follow-up."
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

@@ -1,5 +1,14 @@
 [
   {
+    "date": "2026-06-26",
+    "macrostructure": "Manifesto-to-console tour",
+    "theme": "Loopaal Console Minimal",
+    "enrichment": "CSS workflow console",
+    "brief": "product landing page with dashboard route split",
+    "nav": "minimal product nav",
+    "footer": "quiet product footer"
+  },
+  {
     "date": "2026-06-25",
     "macrostructure": "Workbench",
     "theme": "Cobalt",

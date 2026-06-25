@@ -77,17 +77,17 @@ export function LoopaalConsole() {
     <>
       <nav className="nav" aria-label="Loopaal">
         <a className="wordmark" href="/">loopaal</a>
-        <div className="search-pill" aria-label="Command hint"><span>Campaign · workers · approvals</span><kbd>H0</kbd></div>
-        <div className="nav-status"><span className={state.integrations?.dynamodb ? "signal live" : "signal"} /><span>{state.integrations?.store === "dynamodb" ? "DynamoDB" : "Demo store"}</span></div>
+        <div className="search-pill" aria-label="Command hint"><span>Campaign · workers · approvals</span><kbd>demo</kbd></div>
+        <div className="nav-status"><span className={state.integrations?.dynamodb ? "signal live" : "signal"} /><span>{state.integrations?.store === "dynamodb" ? "Live store" : "Demo store"}</span></div>
       </nav>
       <main>
         <section className="intro">
           <div>
-            <p className="kicker">Track 2 · Monetizable B2B App</p>
+            <p className="kicker">operator console</p>
             <h1>Revenue co-workers, supervised.</h1>
           </div>
           <div className="intro-copy">
-            <p>loopaal runs a small agentic system for prospect research, outreach writing, memory, approvals, and auditability — built for Vercel with DynamoDB as the production source of truth.</p>
+            <p>Loopaal runs a small agentic system for prospect research, outreach writing, memory, approvals, and auditability — with every external action kept behind a human gate.</p>
             <a className="btn primary" href="#campaign">Run demo flow</a>
           </div>
         </section>
@@ -95,7 +95,7 @@ export function LoopaalConsole() {
         <section className="workbench">
           <header className="section-head">
             <div>
-              <h2>Hackathon workbench</h2>
+              <h2>Workflow console</h2>
               <p>Create one campaign and watch the co-workers report back.</p>
             </div>
             <button className="btn" onClick={refresh} disabled={Boolean(busy)}>Refresh</button>
@@ -163,7 +163,7 @@ export function LoopaalConsole() {
             </section>
 
             <section className="panel">
-              <header><h3>Memory</h3><span>DynamoDB context</span></header>
+              <header><h3>Memory</h3><span>saved context</span></header>
               <div className="rows">
                 {state.memories.length ? state.memories.slice(0, 6).map(memory => <article className="row" key={memory.id}><b>{memory.scope}</b><small>{memory.text}</small></article>) : <p className="empty">Memory appears after a worker run or inbound reply.</p>}
               </div>
@@ -178,7 +178,7 @@ export function LoopaalConsole() {
           </div>
         </section>
       </main>
-      <footer><span>H0 · Vercel + AWS Databases</span><span>approval-first automation</span></footer>
+      <footer><span>loopaal console</span><span>approval-first automation</span></footer>
     </>
   );
 }
