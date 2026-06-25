@@ -113,7 +113,12 @@ export async function remember(scope: MemoryItem["scope"], scopeId: string, text
 
 export async function saveRunArtifacts(prospects: Prospect[], jobs: WorkerJob[], events: AuditEvent[], memories: MemoryItem[] = []) {
   if (useDynamoDb()) {
+    const campaignId = prospects[0]?.campaignId || jobs[0]?.campaignId;
+    const state = campaignId ? await loadState() : undefined;
+    const campaign = state?.campaigns.find(x => x.id === campaignId);
+    if (campaign) campaign.status = "complete";
     await Promise.all([
+      ...(campaign ? [putEntity({ entityType: "campaign", ...campaign })] : []),
       ...prospects.map(x => putEntity({ entityType: "prospect", ...x })),
       ...jobs.map(x => putEntity({ entityType: "workerJob", ...x })),
       ...events.map(x => putEntity({ entityType: "audit", ...x })),

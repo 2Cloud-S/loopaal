@@ -5,6 +5,7 @@ import { recall } from "./memory.ts";
 import { outboundRisk } from "./policies.ts";
 import { loadState, newWorkerJob, remember, saveApproval, saveCampaign, saveRunArtifacts, setCampaignStatus, updateApproval } from "./repository.ts";
 import { askAI, sendGmail, sendWhatsApp, updateWebsite } from "./adapters.ts";
+import { config } from "./config.ts";
 import type { Approval, Campaign, MemoryItem, Prospect, WorkerJob } from "../types.ts";
 
 export async function createCampaign(name: string, raw: Record<string, unknown>) {
@@ -51,7 +52,8 @@ export async function draftOutreach(prospectId: string, channel: "gmail" | "what
     prospectId: prospect.id,
     to: channel === "gmail" ? prospect.email || "" : prospect.phone || "",
     subject: channel === "gmail" ? subject : undefined,
-    body
+    body,
+    draftSource: generated.source
   };
   const now = nowIso();
   const approval: Approval = { id: makeId("apr"), kind: channel === "gmail" ? "email" : "whatsapp", status: "pending", title: `${channel} · ${prospect.businessName}`, payload, createdAt: now, updatedAt: now };
@@ -86,12 +88,14 @@ async function generateOutreachDraft(campaign: Campaign, prospect: Prospect, cha
     const text = await askAI(prompt, input);
     const cleaned = text.replace(/^```(?:json)?/i, "").replace(/```$/i, "").trim();
     const parsed = JSON.parse(cleaned || "{}") as { subject?: unknown; body?: unknown };
+    const body = typeof parsed.body === "string" ? parsed.body.trim() : "";
     return {
       subject: typeof parsed.subject === "string" ? parsed.subject.trim() : "",
-      body: typeof parsed.body === "string" ? parsed.body.trim() : ""
+      body,
+      source: body ? config.ai.provider : "deterministic"
     };
   } catch {
-    return { subject: "", body: "" };
+    return { subject: "", body: "", source: "deterministic" };
   }
 }
 
