@@ -31,6 +31,9 @@ export const config = {
   },
   google: {
     token: process.env.GOOGLE_ACCESS_TOKEN || "",
+    clientId: process.env.GOOGLE_CLIENT_ID || "",
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+    refreshToken: process.env.GOOGLE_REFRESH_TOKEN || "",
     sheetId: process.env.GOOGLE_SHEET_ID || "",
     driveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID || "",
     sender: process.env.GMAIL_SENDER || ""
@@ -57,15 +60,18 @@ export function useDynamoDb() {
 }
 
 export function integrationStatus() {
+  const googleCanRefresh = Boolean(config.google.clientId && config.google.clientSecret && config.google.refreshToken);
+  const googleCanAuthorize = Boolean(config.google.token || googleCanRefresh);
   return {
     store: useDynamoDb() ? "dynamodb" : "demo",
     dynamodb: useDynamoDb(),
     aiProvider: config.ai.provider,
     gemini: Boolean(config.ai.geminiApiKey && config.ai.geminiModel),
     openai: Boolean(config.openai.apiKey && config.openai.model),
-    sheets: Boolean(config.google.token && config.google.sheetId),
-    drive: Boolean(config.google.token && config.google.driveFolderId),
-    gmail: Boolean(config.google.token && config.google.sender),
+    googleRefresh: googleCanRefresh,
+    sheets: Boolean(googleCanAuthorize && config.google.sheetId),
+    drive: Boolean(googleCanAuthorize && config.google.driveFolderId),
+    gmail: Boolean(googleCanAuthorize && config.google.sender),
     whatsapp: Boolean(config.whatsapp.token && config.whatsapp.phoneNumberId),
     website: Boolean(config.website.url && config.website.secret)
   };

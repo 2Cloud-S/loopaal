@@ -24,6 +24,7 @@ Open `http://localhost:3000`. With `LOOPAAL_STORE=demo`, loopaal uses local demo
 - [PLANNING.md](./PLANNING.md)
 - [AWS.md](./AWS.md)
 - [VERCEL.md](./VERCEL.md)
+- [GMAIL.md](./GMAIL.md)
 
 ## Core demo flow
 
@@ -37,6 +38,7 @@ Open `http://localhost:3000`. With `LOOPAAL_STORE=demo`, loopaal uses local demo
 
 - Research and drafting may run automatically.
 - Email, WhatsApp, and website changes require approval by default.
+- Gmail should use a dedicated sending mailbox and the `gmail.send` scope, not a personal main inbox.
 - Demo mode never sends real external messages.
 - Every meaningful transition is written to the audit log.
 - Public-web research must respect source terms, privacy rules, opt-outs, and applicable anti-spam laws.

@@ -19,6 +19,10 @@ Set the variables from `.env.example`, especially:
 - `AI_PROVIDER=gemini`
 - `GEMINI_API_KEY`
 - `GEMINI_MODEL=gemini-2.5-flash`
+- `GOOGLE_CLIENT_ID`
+- `GOOGLE_CLIENT_SECRET`
+- `GOOGLE_REFRESH_TOKEN`
+- `GMAIL_SENDER`
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
 

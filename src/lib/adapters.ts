@@ -7,6 +7,31 @@ async function checked(url: string, init: RequestInit) {
   return response.json().catch(() => ({}));
 }
 
+let cachedGoogleToken: { accessToken: string; expiresAt: number } | undefined;
+
+async function googleAccessToken() {
+  if (cachedGoogleToken && cachedGoogleToken.expiresAt > Date.now() + 60_000) return cachedGoogleToken.accessToken;
+  if (config.google.refreshToken && config.google.clientId && config.google.clientSecret) {
+    const data = await checked("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: config.google.clientId,
+        client_secret: config.google.clientSecret,
+        refresh_token: config.google.refreshToken,
+        grant_type: "refresh_token"
+      })
+    }) as { access_token?: string; expires_in?: number };
+    if (!data.access_token) throw new Error("Google OAuth refresh did not return an access token");
+    cachedGoogleToken = {
+      accessToken: data.access_token,
+      expiresAt: Date.now() + Math.max(1, data.expires_in || 3600) * 1000
+    };
+    return cachedGoogleToken.accessToken;
+  }
+  return config.google.token;
+}
+
 export async function askOpenAI(instructions: string, input: string, webSearch = false) {
   if (!config.openai.apiKey || !config.openai.model) return "";
   const body: Record<string, unknown> = { model: config.openai.model, instructions, input };
@@ -40,12 +65,14 @@ export async function askAI(instructions: string, input: string, webSearch = fal
 }
 
 export async function sendGmail(to: string, subject: string, body: string) {
-  if (!config.google.token || !config.google.sender || !to) return { mode: "demo", channel: "gmail", to, subject };
+  if (!config.google.sender || !to) return { mode: "demo", channel: "gmail", to, subject };
+  const token = await googleAccessToken();
+  if (!token) return { mode: "demo", channel: "gmail", to, subject };
   const mime = `From: ${config.google.sender}\r\nTo: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
   const raw = Buffer.from(mime).toString("base64url");
   return checked("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
     method: "POST",
-    headers: { Authorization: `Bearer ${config.google.token}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ raw })
   });
 }
