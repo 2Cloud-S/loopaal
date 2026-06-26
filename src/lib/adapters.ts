@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { config } from "./config.ts";
+import type { Connection } from "../types.ts";
 
 async function checked(url: string, init: RequestInit) {
   const response = await fetch(url, init);
@@ -9,16 +10,18 @@ async function checked(url: string, init: RequestInit) {
 
 let cachedGoogleToken: { accessToken: string; expiresAt: number } | undefined;
 
-async function googleAccessToken() {
+async function googleAccessToken(connection?: Connection) {
+  if (connection?.accessToken && connection.expiresAt && new Date(connection.expiresAt).getTime() > Date.now() + 60_000) return connection.accessToken;
+  const refreshToken = connection?.refreshToken || config.google.refreshToken;
   if (cachedGoogleToken && cachedGoogleToken.expiresAt > Date.now() + 60_000) return cachedGoogleToken.accessToken;
-  if (config.google.refreshToken && config.google.clientId && config.google.clientSecret) {
+  if (refreshToken && config.google.clientId && config.google.clientSecret) {
     const data = await checked("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         client_id: config.google.clientId,
         client_secret: config.google.clientSecret,
-        refresh_token: config.google.refreshToken,
+        refresh_token: refreshToken,
         grant_type: "refresh_token"
       })
     }) as { access_token?: string; expires_in?: number };
@@ -64,12 +67,13 @@ export async function askAI(instructions: string, input: string, webSearch = fal
   return "";
 }
 
-export async function sendGmail(to: string, subject: string, body: string) {
+export async function sendGmail(to: string, subject: string, body: string, connection?: Connection) {
   if (!config.outbound.live) return { mode: "preview", channel: "gmail", to, subject };
-  if (!config.google.sender || !to) return { mode: "demo", channel: "gmail", to, subject };
-  const token = await googleAccessToken();
+  const sender = connection?.label.includes("@") ? connection.label : config.google.sender;
+  if (!sender || !to) return { mode: "demo", channel: "gmail", to, subject };
+  const token = await googleAccessToken(connection);
   if (!token) return { mode: "demo", channel: "gmail", to, subject };
-  const mime = `From: ${config.google.sender}\r\nTo: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
+  const mime = `From: ${sender}\r\nTo: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
   const raw = Buffer.from(mime).toString("base64url");
   return checked("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
     method: "POST",

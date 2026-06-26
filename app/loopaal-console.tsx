@@ -5,24 +5,36 @@ import type { AppState, Campaign, Prospect } from "../src/types.ts";
 
 type State = AppState & { integrations?: Record<string, unknown> };
 
-const emptyState: State = { campaigns: [], prospects: [], memories: [], approvals: [], workerJobs: [], audit: [] };
+const emptyState: State = { campaigns: [], prospects: [], memories: [], approvals: [], workerJobs: [], audit: [], connections: [] };
 
-async function api(path: string, init?: RequestInit) {
-  const response = await fetch(path, { ...init, headers: { "Content-Type": "application/json", ...(init?.headers || {}) } });
+function getWorkspaceId() {
+  if (typeof window === "undefined") return "server";
+  const key = "loopaal.workspaceId";
+  const current = window.localStorage.getItem(key);
+  if (current) return current;
+  const next = `ws_${crypto.randomUUID().slice(0, 12)}`;
+  window.localStorage.setItem(key, next);
+  return next;
+}
+
+async function api(path: string, workspaceId: string, init?: RequestInit) {
+  const response = await fetch(path, { ...init, headers: { "Content-Type": "application/json", "x-loopaal-workspace": workspaceId, ...(init?.headers || {}) } });
   if (!response.ok) throw new Error(await response.text());
   return response.json();
 }
 
 export function LoopaalConsole() {
   const [state, setState] = useState<State>(emptyState);
+  const [workspaceId, setWorkspaceId] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
 
-  async function refresh() {
-    setState(await api("/api/state"));
+  async function refresh(id = workspaceId || getWorkspaceId()) {
+    setWorkspaceId(id);
+    setState(await api("/api/state", id));
   }
 
-  useEffect(() => { refresh().catch(error => setError(String(error))); }, []);
+  useEffect(() => { refresh(getWorkspaceId()).catch(error => setError(String(error))); }, []);
 
   const metrics = useMemo(() => [
     ["Campaigns", state.campaigns.length],
@@ -38,9 +50,9 @@ export function LoopaalConsole() {
     setBusy("Creating campaign");
     setError("");
     try {
-      const campaign = await api("/api/campaigns", { method: "POST", body: JSON.stringify(data) }) as Campaign;
+      const campaign = await api("/api/campaigns", workspaceId, { method: "POST", body: JSON.stringify(data) }) as Campaign;
       form.reset();
-      await api(`/api/campaigns/${campaign.id}/run`, { method: "POST" });
+      await api(`/api/campaigns/${campaign.id}/run`, workspaceId, { method: "POST" });
       await refresh();
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));
@@ -52,7 +64,7 @@ export function LoopaalConsole() {
   async function draft(prospect: Prospect, channel: "gmail" | "whatsapp") {
     setBusy(`Drafting ${channel}`);
     try {
-      await api("/api/drafts", { method: "POST", body: JSON.stringify({ prospectId: prospect.id, channel }) });
+      await api("/api/drafts", workspaceId, { method: "POST", body: JSON.stringify({ prospectId: prospect.id, channel }) });
       await refresh();
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));
@@ -64,7 +76,7 @@ export function LoopaalConsole() {
   async function approval(id: string, action: "approve" | "reject") {
     setBusy(action === "approve" ? "Approving action" : "Rejecting action");
     try {
-      await api(`/api/approvals/${id}/${action}`, { method: "POST", body: JSON.stringify({}) });
+      await api(`/api/approvals/${id}/${action}`, workspaceId, { method: "POST", body: JSON.stringify({}) });
       await refresh();
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));
@@ -77,7 +89,7 @@ export function LoopaalConsole() {
     <>
       <nav className="nav" aria-label="Loopaal">
         <a className="wordmark" href="/">loopaal</a>
-        <div className="search-pill" aria-label="Command hint"><span>Campaign · workers · approvals</span><kbd>safe</kbd></div>
+        <div className="search-pill" aria-label="Command hint"><span>Campaign · workers · approvals</span><kbd>{workspaceId ? workspaceId.slice(-4) : "safe"}</kbd></div>
         <div className="nav-status"><span className={state.integrations?.outboundLive ? "signal live" : "signal"} /><span>{state.integrations?.outboundLive ? "Live actions" : "Preview actions"}</span></div>
       </nav>
       <main>
@@ -105,9 +117,9 @@ export function LoopaalConsole() {
           <header className="section-head">
             <div>
               <h2>Workflow console</h2>
-              <p>Create one campaign and watch the co-workers report back.</p>
+              <p>Create one campaign and watch the co-workers report back. New workspaces start empty; the rows below are live records from your workspace, not static samples.</p>
             </div>
-            <button className="btn" onClick={refresh} disabled={Boolean(busy)}>Refresh</button>
+            <button className="btn" onClick={() => refresh()} disabled={Boolean(busy)}>Refresh</button>
           </header>
 
           <div className="metrics" aria-label="Project metrics">
@@ -143,7 +155,7 @@ export function LoopaalConsole() {
             </section>
 
             <section className="panel panel-wide">
-              <header><h3>Prospects</h3><span>verified-safe records</span></header>
+              <header><h3>Prospects</h3><span>draft buttons appear after research</span></header>
               <div className="rows">
                 {state.prospects.length ? state.prospects.map(prospect => (
                   <article className="row" key={prospect.id}>
@@ -154,12 +166,12 @@ export function LoopaalConsole() {
                       <button className="btn" onClick={() => draft(prospect, "whatsapp")} disabled={Boolean(busy)}>Draft WhatsApp</button>
                     </div>
                   </article>
-                )) : <p className="empty">Run a campaign to generate prospects.</p>}
+                )) : <p className="empty">Run a campaign to generate real prospect records for this workspace. Nothing here is pre-filled sample data.</p>}
               </div>
             </section>
 
             <section className="panel">
-              <header><h3>Approvals</h3><span>human gate</span></header>
+              <header><h3>Approvals</h3><span>drafts you create</span></header>
               <div className="rows">
                 {state.approvals.length ? state.approvals.slice(0, 8).map(item => (
                   <article className="row" key={item.id}>
@@ -167,7 +179,7 @@ export function LoopaalConsole() {
                     <small>{String(item.payload.subject || item.payload.body || "Website change request").slice(0, 110)}</small>
                     {item.status === "pending" ? <div className="row-actions"><button className="btn primary" onClick={() => approval(item.id, "approve")}>Approve</button><button className="btn" onClick={() => approval(item.id, "reject")}>Reject</button></div> : null}
                   </article>
-                )) : <p className="empty">No pending approvals.</p>}
+                )) : <p className="empty">No drafts yet. After prospects appear, click “Draft email” or “Draft WhatsApp” to create approval items here.</p>}
               </div>
             </section>
 

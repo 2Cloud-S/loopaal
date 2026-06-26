@@ -8,16 +8,16 @@ import { askAI, sendGmail, sendWhatsApp, updateWebsite } from "./adapters.ts";
 import { config } from "./config.ts";
 import type { Approval, Campaign, MemoryItem, Prospect, WorkerJob } from "../types.ts";
 
-export async function createCampaign(name: string, raw: Record<string, unknown>) {
-  const campaign: Campaign = { id: makeId("cmp"), name, status: "draft", criteria: normalizeCriteria(raw), createdAt: nowIso() };
-  return saveCampaign(campaign);
+export async function createCampaign(name: string, raw: Record<string, unknown>, workspaceId?: string) {
+  const campaign: Campaign = { id: makeId("cmp"), workspaceId, name, status: "draft", criteria: normalizeCriteria(raw), createdAt: nowIso() };
+  return saveCampaign(campaign, workspaceId);
 }
 
-export async function runCampaign(id: string) {
-  const state = await loadState();
+export async function runCampaign(id: string, workspaceId?: string) {
+  const state = await loadState(workspaceId);
   const campaign = state.campaigns.find(x => x.id === id);
   if (!campaign) throw new Error("Campaign not found");
-  await setCampaignStatus(id, "running");
+  await setCampaignStatus(id, "running", workspaceId);
   const baseInput = { campaign, prospects: state.prospects.filter(x => x.campaignId === id), memory: recall(state, `${campaign.name} ${campaign.criteria.industries.join(" ")}`) };
   const firstPass = await runWorkers(baseInput);
   const researched = firstPass.find(x => x.workerId === "researcher")?.artifacts.prospects as Prospect[] | undefined;
@@ -32,11 +32,11 @@ export async function runCampaign(id: string) {
     audit("coworkers.completed", `${jobs.length} co-workers reported for ${campaign.name}`),
     audit("campaign.completed", `${prospects.length} prospects processed`)
   ];
-  return saveRunArtifacts(prospects, jobs, events, memoryResults);
+  return saveRunArtifacts(prospects, jobs, events, memoryResults, workspaceId);
 }
 
-export async function draftOutreach(prospectId: string, channel: "gmail" | "whatsapp") {
-  const state = await loadState();
+export async function draftOutreach(prospectId: string, channel: "gmail" | "whatsapp", workspaceId?: string) {
+  const state = await loadState(workspaceId);
   const prospect = state.prospects.find(x => x.id === prospectId);
   if (!prospect) throw new Error("Prospect not found");
   const campaign = state.campaigns.find(x => x.id === prospect.campaignId);
@@ -57,7 +57,7 @@ export async function draftOutreach(prospectId: string, channel: "gmail" | "what
   };
   const now = nowIso();
   const approval: Approval = { id: makeId("apr"), kind: channel === "gmail" ? "email" : "whatsapp", status: "pending", title: `${channel} · ${prospect.businessName}`, payload, createdAt: now, updatedAt: now };
-  return saveApproval(approval);
+  return saveApproval(approval, workspaceId);
 }
 
 async function generateOutreachDraft(campaign: Campaign, prospect: Prospect, channel: "gmail" | "whatsapp") {
@@ -99,13 +99,13 @@ async function generateOutreachDraft(campaign: Campaign, prospect: Prospect, cha
   }
 }
 
-export async function approveAction(id: string, scheduledFor?: string) {
-  const state = await updateApproval(id, "approved", scheduledFor);
-  return executeDue(state);
+export async function approveAction(id: string, scheduledFor?: string, workspaceId?: string) {
+  const state = await updateApproval(id, "approved", scheduledFor, workspaceId);
+  return executeDue(state, workspaceId);
 }
 
-export async function rejectAction(id: string) {
-  return updateApproval(id, "rejected");
+export async function rejectAction(id: string, workspaceId?: string) {
+  return updateApproval(id, "rejected", undefined, workspaceId);
 }
 
 export async function requestWebsiteChange(data: Record<string, unknown>) {
@@ -118,18 +118,18 @@ export async function ingestReply(channel: "gmail" | "whatsapp", data: Record<st
   return remember("conversation", String(data.threadId || data.from || makeId("thread")), JSON.stringify(data), [channel, "inbound"]);
 }
 
-export async function executeDue(state?: Awaited<ReturnType<typeof loadState>>) {
-  const current = state || await loadState();
+export async function executeDue(state?: Awaited<ReturnType<typeof loadState>>, workspaceId?: string) {
+  const current = state || await loadState(workspaceId);
   for (const approval of current.approvals.filter(x => x.status === "approved" && (!x.scheduledFor || new Date(x.scheduledFor).getTime() <= Date.now()))) {
     const p = approval.payload;
     const risk = outboundRisk(String(p.body || ""));
-    if (risk.length) await updateApproval(approval.id, "failed");
+    if (risk.length) await updateApproval(approval.id, "failed", undefined, workspaceId);
     else {
-      if (approval.kind === "email") await sendGmail(String(p.to || ""), String(p.subject || ""), String(p.body || ""));
+      if (approval.kind === "email") await sendGmail(String(p.to || ""), String(p.subject || ""), String(p.body || ""), current.connections.find(connection => connection.provider === "google"));
       if (approval.kind === "whatsapp") await sendWhatsApp(String(p.to || ""), String(p.body || ""));
       if (approval.kind === "website") await updateWebsite(p);
-      await updateApproval(approval.id, "executed");
+      await updateApproval(approval.id, "executed", undefined, workspaceId);
     }
   }
-  return loadState();
+  return loadState(workspaceId);
 }

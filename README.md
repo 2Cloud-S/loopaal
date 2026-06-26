@@ -18,6 +18,8 @@ With `LOOPAAL_STORE=demo`, loopaal uses local demo persistence. With `LOOPAAL_ST
 
 External sends are safe by default. Gmail, WhatsApp, and website updates run in preview mode unless `OUTBOUND_SENDS_LIVE=true` is set for a workspace with owned channel credentials.
 
+Each browser gets a workspace id stored in local storage. API requests include that workspace id so new consumers start with empty campaigns/prospects/approvals instead of seeing another operator's data.
+
 ## Hackathon docs
 
 - [PRD.md](./PRD.md)
@@ -45,6 +47,7 @@ External sends are safe by default. Gmail, WhatsApp, and website updates run in 
 - Email, WhatsApp, and website changes require approval by default.
 - Real external actions require `OUTBOUND_SENDS_LIVE=true`; otherwise approved actions remain non-destructive previews.
 - Gmail should use a dedicated sending mailbox and the `gmail.send` scope, not a personal main inbox.
+- Consumers connect Google from `/setup`; OAuth tokens are saved against their workspace, not treated as global sender identity.
 - Demo mode never sends real external messages.
 - Every meaningful transition is written to the audit log.
 - Public-web research must respect source terms, privacy rules, opt-outs, and applicable anti-spam laws.

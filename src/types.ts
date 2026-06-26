@@ -13,6 +13,7 @@ export interface CampaignCriteria {
 
 export interface Campaign {
   id: string;
+  workspaceId?: string;
   name: string;
   status: "draft" | "running" | "paused" | "complete";
   criteria: CampaignCriteria;
@@ -21,6 +22,7 @@ export interface Campaign {
 
 export interface Prospect {
   id: string;
+  workspaceId?: string;
   campaignId: string;
   businessName: string;
   website?: string;
@@ -38,6 +40,7 @@ export interface Prospect {
 
 export interface MemoryItem {
   id: string;
+  workspaceId?: string;
   scope: "business" | "campaign" | "prospect" | "conversation";
   scopeId: string;
   text: string;
@@ -47,6 +50,7 @@ export interface MemoryItem {
 
 export interface Approval {
   id: string;
+  workspaceId?: string;
   kind: ApprovalKind;
   status: "pending" | "approved" | "rejected" | "executed" | "failed";
   title: string;
@@ -58,6 +62,7 @@ export interface Approval {
 
 export interface WorkerJob {
   id: string;
+  workspaceId?: string;
   campaignId: string;
   workerId: string;
   status: WorkerStatus;
@@ -70,6 +75,7 @@ export interface WorkerJob {
 
 export interface AuditEvent {
   id: string;
+  workspaceId?: string;
   actor: string;
   action: string;
   detail: string;
@@ -83,4 +89,19 @@ export interface AppState {
   approvals: Approval[];
   workerJobs: WorkerJob[];
   audit: AuditEvent[];
+  connections: Connection[];
+}
+
+export interface Connection {
+  id: string;
+  workspaceId: string;
+  provider: "google" | "whatsapp" | "website";
+  status: "connected" | "needs_setup";
+  scopes: string[];
+  label: string;
+  accessToken?: string;
+  refreshToken?: string;
+  expiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
 }

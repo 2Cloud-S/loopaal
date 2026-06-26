@@ -1,4 +1,5 @@
 import { integrationStatus } from "../../src/lib/config.ts";
+import { SetupClient } from "./setup-client.tsx";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,8 @@ export default function SetupPage() {
             </div>
           </article>
         </section>
+
+        <SetupClient />
 
         <section className="setup-note">
           <div>

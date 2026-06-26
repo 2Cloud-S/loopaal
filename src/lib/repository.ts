@@ -4,10 +4,10 @@ import { dynamoRequest, marshal, unmarshal } from "./dynamodb.ts";
 import { keysFor, type StoredEntity } from "./dynamo-keys.ts";
 import { audit, makeId, nowIso } from "./ids.ts";
 import { config, useDynamoDb } from "./config.ts";
-import type { AppState, AuditEvent, Campaign, MemoryItem, Prospect, Approval, WorkerJob } from "../types.ts";
+import type { AppState, AuditEvent, Campaign, MemoryItem, Prospect, Approval, WorkerJob, Connection } from "../types.ts";
 
 const demoFile = join(process.cwd(), "data", "loopaal.json");
-const emptyState = (): AppState => ({ campaigns: [], prospects: [], memories: [], approvals: [], workerJobs: [], audit: [] });
+const emptyState = (): AppState => ({ campaigns: [], prospects: [], memories: [], approvals: [], workerJobs: [], audit: [], connections: [] });
 let queue = Promise.resolve();
 
 type DynamoItem = StoredEntity & { pk: string; sk: string; gsi1pk?: string; gsi1sk?: string; gsi2pk?: string; gsi2sk?: string };
@@ -15,7 +15,7 @@ type DynamoItem = StoredEntity & { pk: string; sk: string; gsi1pk?: string; gsi1
 async function loadDemo(): Promise<AppState> {
   try {
     const state = JSON.parse(await readFile(demoFile, "utf8")) as Partial<AppState>;
-    return { ...emptyState(), ...state, workerJobs: state.workerJobs || [] };
+    return { ...emptyState(), ...state, workerJobs: state.workerJobs || [], connections: state.connections || [] };
   } catch {
     return emptyState();
   }
@@ -44,19 +44,42 @@ function toState(entities: StoredEntity[]): AppState {
     memories: entities.filter((x): x is StoredEntity & MemoryItem => x.entityType === "memory").sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     approvals: entities.filter((x): x is StoredEntity & Approval => x.entityType === "approval").sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     workerJobs: entities.filter((x): x is StoredEntity & WorkerJob => x.entityType === "workerJob").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
-    audit: entities.filter((x): x is StoredEntity & AuditEvent => x.entityType === "audit").sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    audit: entities.filter((x): x is StoredEntity & AuditEvent => x.entityType === "audit").sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    connections: entities.filter((x): x is StoredEntity & Connection => x.entityType === "connection").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   };
 }
 
-export async function loadState(): Promise<AppState> {
-  if (!useDynamoDb()) return loadDemo();
-  return toState(await scanEntities());
+function scopedState(state: AppState, workspaceId?: string): AppState {
+  if (!workspaceId) return state;
+  const campaigns = state.campaigns.filter(x => x.workspaceId === workspaceId);
+  const campaignIds = new Set(campaigns.map(x => x.id));
+  const prospects = state.prospects.filter(x => x.workspaceId === workspaceId || campaignIds.has(x.campaignId));
+  const prospectIds = new Set(prospects.map(x => x.id));
+  return {
+    campaigns,
+    prospects,
+    workerJobs: state.workerJobs.filter(x => x.workspaceId === workspaceId || campaignIds.has(x.campaignId)),
+    memories: state.memories.filter(x => x.workspaceId === workspaceId || campaignIds.has(x.scopeId) || x.tags.some(tag => campaignIds.has(tag))),
+    approvals: state.approvals.filter(x => x.workspaceId === workspaceId || prospectIds.has(String(x.payload.prospectId || ""))),
+    audit: state.audit.filter(x => x.workspaceId === workspaceId || campaigns.some(campaign => x.detail.includes(campaign.id) || x.detail.includes(campaign.name))),
+    connections: state.connections.filter(x => x.workspaceId === workspaceId)
+  };
 }
 
-export async function replaceState(mutator: (state: AppState) => void | Promise<void>) {
+function withWorkspace<T extends { workspaceId?: string }>(items: T[], workspaceId?: string) {
+  if (!workspaceId) return items;
+  return items.map(item => ({ ...item, workspaceId }));
+}
+
+export async function loadState(workspaceId?: string): Promise<AppState> {
+  if (!useDynamoDb()) return scopedState(await loadDemo(), workspaceId);
+  return scopedState(toState(await scanEntities()), workspaceId);
+}
+
+export async function replaceState(mutator: (state: AppState) => void | Promise<void>, workspaceId?: string) {
   let result = emptyState();
   queue = queue.then(async () => {
-    const state = await loadState();
+    const state = await loadState(workspaceId);
     await mutator(state);
     if (useDynamoDb()) {
       const entities: StoredEntity[] = [
@@ -65,7 +88,8 @@ export async function replaceState(mutator: (state: AppState) => void | Promise<
         ...state.memories.map(x => ({ entityType: "memory" as const, ...x })),
         ...state.approvals.map(x => ({ entityType: "approval" as const, ...x })),
         ...state.workerJobs.map(x => ({ entityType: "workerJob" as const, ...x })),
-        ...state.audit.map(x => ({ entityType: "audit" as const, ...x }))
+        ...state.audit.map(x => ({ entityType: "audit" as const, ...x })),
+        ...state.connections.map(x => ({ entityType: "connection" as const, ...x }))
       ];
       await Promise.all(entities.map(putEntity));
     } else {
@@ -84,17 +108,19 @@ export async function appendAudit(action: string, detail: string, actor = "loopa
   return event;
 }
 
-export async function saveCampaign(campaign: Campaign) {
+export async function saveCampaign(campaign: Campaign, workspaceId?: string) {
+  const campaignWithWorkspace = workspaceId ? { ...campaign, workspaceId } : campaign;
+  const event = workspaceId ? { ...audit("campaign.created", campaign.name, "operator"), workspaceId } : audit("campaign.created", campaign.name, "operator");
   if (useDynamoDb()) {
-    await putEntity({ entityType: "campaign", ...campaign });
-    await putEntity({ entityType: "audit", ...audit("campaign.created", campaign.name, "operator") });
-    return campaign;
+    await putEntity({ entityType: "campaign", ...campaignWithWorkspace });
+    await putEntity({ entityType: "audit", ...event });
+    return campaignWithWorkspace;
   }
   await replaceState(state => {
-    state.campaigns.unshift(campaign);
-    state.audit.unshift(audit("campaign.created", campaign.name, "operator"));
-  });
-  return campaign;
+    state.campaigns.unshift(campaignWithWorkspace);
+    state.audit.unshift(event);
+  }, workspaceId);
+  return campaignWithWorkspace;
 }
 
 export async function remember(scope: MemoryItem["scope"], scopeId: string, text: string, tags: string[] = []) {
@@ -111,53 +137,59 @@ export async function remember(scope: MemoryItem["scope"], scopeId: string, text
   });
 }
 
-export async function saveRunArtifacts(prospects: Prospect[], jobs: WorkerJob[], events: AuditEvent[], memories: MemoryItem[] = []) {
+export async function saveRunArtifacts(prospects: Prospect[], jobs: WorkerJob[], events: AuditEvent[], memories: MemoryItem[] = [], workspaceId?: string) {
+  const scopedProspects = withWorkspace(prospects, workspaceId);
+  const scopedJobs = withWorkspace(jobs, workspaceId);
+  const scopedEvents = withWorkspace(events, workspaceId);
+  const scopedMemories = withWorkspace(memories, workspaceId);
   if (useDynamoDb()) {
-    const campaignId = prospects[0]?.campaignId || jobs[0]?.campaignId;
-    const state = campaignId ? await loadState() : undefined;
+    const campaignId = scopedProspects[0]?.campaignId || scopedJobs[0]?.campaignId;
+    const state = campaignId ? await loadState(workspaceId) : undefined;
     const campaign = state?.campaigns.find(x => x.id === campaignId);
     if (campaign) campaign.status = "complete";
     await Promise.all([
       ...(campaign ? [putEntity({ entityType: "campaign", ...campaign })] : []),
-      ...prospects.map(x => putEntity({ entityType: "prospect", ...x })),
-      ...jobs.map(x => putEntity({ entityType: "workerJob", ...x })),
-      ...events.map(x => putEntity({ entityType: "audit", ...x })),
-      ...memories.map(x => putEntity({ entityType: "memory", ...x }))
+      ...scopedProspects.map(x => putEntity({ entityType: "prospect", ...x })),
+      ...scopedJobs.map(x => putEntity({ entityType: "workerJob", ...x })),
+      ...scopedEvents.map(x => putEntity({ entityType: "audit", ...x })),
+      ...scopedMemories.map(x => putEntity({ entityType: "memory", ...x }))
     ]);
-    return loadState();
+    return loadState(workspaceId);
   }
   return replaceState(state => {
-    state.prospects.unshift(...prospects);
-    state.workerJobs.unshift(...jobs);
-    state.memories.unshift(...memories);
-    state.audit.unshift(...events);
-    const campaign = prospects[0] ? state.campaigns.find(x => x.id === prospects[0].campaignId) : undefined;
+    state.prospects.unshift(...scopedProspects);
+    state.workerJobs.unshift(...scopedJobs);
+    state.memories.unshift(...scopedMemories);
+    state.audit.unshift(...scopedEvents);
+    const campaign = scopedProspects[0] ? state.campaigns.find(x => x.id === scopedProspects[0].campaignId) : undefined;
     if (campaign) campaign.status = "complete";
-  });
+  }, workspaceId);
 }
 
-export async function saveApproval(approval: Approval) {
+export async function saveApproval(approval: Approval, workspaceId?: string) {
+  const scopedApproval = workspaceId ? { ...approval, workspaceId } : approval;
+  const event = workspaceId ? { ...audit("draft.created", approval.title), workspaceId } : audit("draft.created", approval.title);
   if (useDynamoDb()) {
-    await putEntity({ entityType: "approval", ...approval });
-    await putEntity({ entityType: "audit", ...audit("draft.created", approval.title) });
-    return approval;
+    await putEntity({ entityType: "approval", ...scopedApproval });
+    await putEntity({ entityType: "audit", ...event });
+    return scopedApproval;
   }
   await replaceState(state => {
-    state.approvals.unshift(approval);
-    state.audit.unshift(audit("draft.created", approval.title));
-  });
-  return approval;
+    state.approvals.unshift(scopedApproval);
+    state.audit.unshift(event);
+  }, workspaceId);
+  return scopedApproval;
 }
 
-export async function setCampaignStatus(id: string, status: Campaign["status"]) {
+export async function setCampaignStatus(id: string, status: Campaign["status"], workspaceId?: string) {
   return replaceState(state => {
     const campaign = state.campaigns.find(x => x.id === id);
     if (campaign) campaign.status = status;
     state.audit.unshift(audit("campaign.status", `${id} -> ${status}`));
-  });
+  }, workspaceId);
 }
 
-export async function updateApproval(id: string, status: Approval["status"], scheduledFor?: string) {
+export async function updateApproval(id: string, status: Approval["status"], scheduledFor?: string, workspaceId?: string) {
   return replaceState(state => {
     const approval = state.approvals.find(x => x.id === id);
     if (!approval) throw new Error("Approval not found");
@@ -165,7 +197,22 @@ export async function updateApproval(id: string, status: Approval["status"], sch
     approval.scheduledFor = scheduledFor || approval.scheduledFor;
     approval.updatedAt = nowIso();
     state.audit.unshift(audit(`approval.${status}`, approval.title, "operator"));
-  });
+  }, workspaceId);
+}
+
+export async function saveConnection(connection: Connection) {
+  if (useDynamoDb()) {
+    await putEntity({ entityType: "connection", ...connection });
+    await putEntity({ entityType: "audit", ...audit("connection.saved", `${connection.provider}:${connection.label}`, "operator"), workspaceId: connection.workspaceId });
+    return connection;
+  }
+  await replaceState(state => {
+    const index = state.connections.findIndex(x => x.workspaceId === connection.workspaceId && x.provider === connection.provider);
+    if (index >= 0) state.connections[index] = connection;
+    else state.connections.unshift(connection);
+    state.audit.unshift({ ...audit("connection.saved", `${connection.provider}:${connection.label}`, "operator"), workspaceId: connection.workspaceId });
+  }, connection.workspaceId);
+  return connection;
 }
 
 export function newWorkerJob(campaignId: string, workerId: string, status: WorkerJob["status"], summary: string, artifacts: Record<string, unknown> = {}, error?: string): WorkerJob {

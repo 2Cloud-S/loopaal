@@ -7,6 +7,7 @@
 - Database: AWS DynamoDB single-table design.
 - AI provider: configurable provider adapter with Gemini, OpenAI, and deterministic demo fallback.
 - Outbound mode: external sends run as previews unless `OUTBOUND_SENDS_LIVE=true`.
+- Workspace isolation: browser workspaces send `x-loopaal-workspace`; API state is scoped to that workspace.
 - Worker ecosystem: separate local package intended to become the `workers` GitHub repo/submodule.
 
 ## Core API surface
@@ -21,6 +22,7 @@
 - `POST /api/website-changes` — queue a website update approval.
 - `POST /api/webhooks/gmail` and `/api/webhooks/whatsapp` — ingest replies.
 - `GET /setup` — customer-facing workspace setup and integration readiness.
+- `GET /api/connections/google/start` and `/callback` — Google OAuth for workspace-owned Gmail/Drive access.
 
 ## Persistence requirements
 

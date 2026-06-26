@@ -23,7 +23,7 @@ test("outbound policy flags risky language", () => {
 });
 
 test("memory retrieval ranks matching context", () => {
-  const state: AppState = { campaigns: [], prospects: [], approvals: [], workerJobs: [], audit: [], memories: [
+  const state: AppState = { campaigns: [], prospects: [], approvals: [], workerJobs: [], audit: [], connections: [], memories: [
     { id: "1", scope: "business", scopeId: "a", text: "Architecture studios prefer concise proposals", tags: ["architecture"], createdAt: "2026-01-01" },
     { id: "2", scope: "business", scopeId: "b", text: "Retail note", tags: ["retail"], createdAt: "2026-01-01" }
   ] };

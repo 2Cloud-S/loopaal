@@ -110,6 +110,8 @@ footer { padding: var(--space-lg) clamp(var(--space-md), 4vw, var(--space-xl)); 
 .setup-hero h1 { max-width: 12ch; font-size: clamp(3.25rem, 8vw, 7rem); line-height: .92; letter-spacing: -0.07em; }
 .setup-hero p:not(.kicker) { max-width: 48rem; font-size: var(--text-md); color: var(--color-ink-2); }
 .setup-grid { padding-block: var(--space-2xl); display: grid; gap: var(--space-md); }
+.connection-center { padding-block: var(--space-2xl); border-block-start: var(--rule-thin) solid var(--color-rule); }
+.connection-grid { display: grid; gap: var(--space-md); }
 .setup-card { border: var(--rule-thin) solid var(--color-rule); border-radius: var(--radius-md); background: var(--color-paper); padding: var(--space-lg); display: grid; gap: var(--space-md); align-content: start; }
 .setup-card > span { color: var(--color-accent); font: 600 var(--text-xs)/1 var(--font-mono); }
 .setup-card p { color: var(--color-muted); }
@@ -149,7 +151,7 @@ input:disabled, textarea:disabled { opacity: .55; cursor: not-allowed; }
   .landing-hero { grid-template-columns: minmax(0, 1.05fr) minmax(24rem, .95fr); }
   .worker-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .flow-board, .setup-panel, .safety-panel, .workspace-banner, .setup-note { grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr); align-items: start; }
-  .setup-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .setup-grid, .connection-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 48rem) {
   .landing-nav { grid-template-columns: auto auto; }

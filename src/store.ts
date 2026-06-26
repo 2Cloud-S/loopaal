@@ -3,7 +3,7 @@ import { dirname, join } from "node:path";
 import type { AppState, AuditEvent, MemoryItem } from "./types.ts";
 
 const file = join(process.cwd(), "data", "loopaal.json");
-const emptyState = (): AppState => ({ campaigns: [], prospects: [], memories: [], approvals: [], workerJobs: [], audit: [] });
+const emptyState = (): AppState => ({ campaigns: [], prospects: [], memories: [], approvals: [], workerJobs: [], audit: [], connections: [] });
 let queue = Promise.resolve();
 
 export async function loadState(): Promise<AppState> {
