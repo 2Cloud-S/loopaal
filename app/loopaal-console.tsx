@@ -77,8 +77,8 @@ export function LoopaalConsole() {
     <>
       <nav className="nav" aria-label="Loopaal">
         <a className="wordmark" href="/">loopaal</a>
-        <div className="search-pill" aria-label="Command hint"><span>Campaign · workers · approvals</span><kbd>demo</kbd></div>
-        <div className="nav-status"><span className={state.integrations?.dynamodb ? "signal live" : "signal"} /><span>{state.integrations?.store === "dynamodb" ? "Live store" : "Demo store"}</span></div>
+        <div className="search-pill" aria-label="Command hint"><span>Campaign · workers · approvals</span><kbd>safe</kbd></div>
+        <div className="nav-status"><span className={state.integrations?.outboundLive ? "signal live" : "signal"} /><span>{state.integrations?.outboundLive ? "Live actions" : "Preview actions"}</span></div>
       </nav>
       <main>
         <section className="intro">
@@ -87,12 +87,21 @@ export function LoopaalConsole() {
             <h1>Revenue co-workers, supervised.</h1>
           </div>
           <div className="intro-copy">
-            <p>Loopaal runs a small agentic system for prospect research, outreach writing, memory, approvals, and auditability — with every external action kept behind a human gate.</p>
-            <a className="btn primary" href="#campaign">Run demo flow</a>
+            <p>Loopaal runs a small agentic system for prospect research, outreach writing, memory, approvals, and auditability. Campaigns can run in preview; real sends require customer-owned channels.</p>
+            <a className="btn primary" href="#campaign">Create campaign</a>
           </div>
         </section>
 
         <section className="workbench">
+          <section className="workspace-banner" aria-label="Workspace readiness">
+            <div>
+              <p className="kicker">workspace readiness</p>
+              <h2>{state.integrations?.outboundLive ? "Live outbound is enabled." : "External actions are in preview mode."}</h2>
+              <p>{state.integrations?.outboundLive ? "Approved emails, WhatsApp messages, and website updates can execute through connected business channels." : "Workers, memory, and drafts work now. Approved sends remain non-destructive until this workspace connects owned channels and enables live mode."}</p>
+            </div>
+            <a className="btn" href="/setup">Setup workspace</a>
+          </section>
+
           <header className="section-head">
             <div>
               <h2>Workflow console</h2>

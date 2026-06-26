@@ -12,7 +12,11 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`. With `LOOPAAL_STORE=demo`, loopaal uses local demo persistence. With `LOOPAAL_STORE=dynamodb` and AWS credentials, it writes to DynamoDB. Set `AI_PROVIDER=gemini` with `GEMINI_API_KEY` for Gemini-powered drafts, or leave `AI_PROVIDER=demo` for deterministic demo copy.
+Open `http://localhost:3000`. The product starts with workspace setup, then moves users into `/dashboard`.
+
+With `LOOPAAL_STORE=demo`, loopaal uses local demo persistence. With `LOOPAAL_STORE=dynamodb` and AWS credentials, it writes to DynamoDB. Set `AI_PROVIDER=gemini` with `GEMINI_API_KEY` for Gemini-powered drafts, or leave `AI_PROVIDER=demo` for deterministic copy.
+
+External sends are safe by default. Gmail, WhatsApp, and website updates run in preview mode unless `OUTBOUND_SENDS_LIVE=true` is set for a workspace with owned channel credentials.
 
 ## Hackathon docs
 
@@ -28,16 +32,18 @@ Open `http://localhost:3000`. With `LOOPAAL_STORE=demo`, loopaal uses local demo
 
 ## Core demo flow
 
-1. Create a campaign from volatile targeting criteria.
-2. Launch co-workers in parallel.
-3. Persist prospects, worker jobs, memory, approvals, and audit events.
-4. Draft email or WhatsApp outreach.
-5. Approve or reject the proposed action.
+1. Complete workspace setup.
+2. Create a campaign from volatile targeting criteria.
+3. Launch co-workers in parallel.
+4. Persist prospects, worker jobs, memory, approvals, and audit events.
+5. Draft email or WhatsApp outreach.
+6. Approve or reject the proposed action.
 
 ## Safety model
 
 - Research and drafting may run automatically.
 - Email, WhatsApp, and website changes require approval by default.
+- Real external actions require `OUTBOUND_SENDS_LIVE=true`; otherwise approved actions remain non-destructive previews.
 - Gmail should use a dedicated sending mailbox and the `gmail.send` scope, not a personal main inbox.
 - Demo mode never sends real external messages.
 - Every meaningful transition is written to the audit log.

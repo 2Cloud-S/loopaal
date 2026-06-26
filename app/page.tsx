@@ -15,9 +15,10 @@ export default function Page() {
         <div className="nav-links">
           <a href="#workflow">workflow</a>
           <a href="#safety">safety</a>
+          <a href="/setup">setup</a>
           <a href="/dashboard">console</a>
         </div>
-        <a className="btn compact" href="/dashboard">Launch demo</a>
+        <a className="btn compact" href="/setup">Start setup</a>
       </nav>
 
       <main className="landing">
@@ -29,7 +30,7 @@ export default function Page() {
               Loopaal turns volatile B2B targeting criteria into researched prospects, contextual outreach, durable memory, and approval-gated actions.
             </p>
             <div className="hero-actions">
-              <a className="btn primary" href="/dashboard">Launch workflow</a>
+              <a className="btn primary" href="/setup">Start onboarding</a>
               <a className="btn" href="#workflow">See how it runs</a>
             </div>
           </div>
@@ -40,7 +41,7 @@ export default function Page() {
             <div className="console-grid">
               <span>researcher</span><b>complete</b>
               <span>analyst</span><b>complete</b>
-              <span>writer</span><b>gemini draft</b>
+              <span>writer</span><b>AI draft</b>
               <span>approval</span><b>pending human</b>
             </div>
             <div className="console-output">No external send happens until the operator approves it.</div>
@@ -79,6 +80,15 @@ export default function Page() {
             <div><span>outreach</span><b>draft only</b></div>
             <div><span>approval</span><b>send gate</b></div>
           </div>
+        </section>
+
+        <section className="setup-panel">
+          <div>
+            <p className="kicker">customer workspace</p>
+            <h2>Preview first. Connect owned channels later.</h2>
+          </div>
+          <p>Campaigns, co-workers, memory, and AI drafts work before a customer connects private channels. Real email, WhatsApp, and website actions stay in preview until the workspace owner connects their own accounts and enables live outbound mode.</p>
+          <a className="btn" href="/setup">View setup path</a>
         </section>
 
         <section className="safety-panel" id="safety">

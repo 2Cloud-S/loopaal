@@ -45,7 +45,7 @@ main { padding-inline: clamp(var(--space-md), 4vw, var(--space-xl)); }
 .console-grid span { color: var(--color-rule-2); }
 .console-grid b { color: var(--color-on-dark); font-weight: 500; }
 .console-output { color: var(--color-success-light); border-block-start: var(--rule-thin) solid var(--color-graphite-2); padding-block-start: var(--space-md); }
-.primitive-strip, .flow-board, .safety-panel { padding-block: clamp(var(--space-2xl), 7vw, 7rem); border-block-end: var(--rule-thin) solid var(--color-rule); }
+.primitive-strip, .flow-board, .setup-panel, .safety-panel { padding-block: clamp(var(--space-2xl), 7vw, 7rem); border-block-end: var(--rule-thin) solid var(--color-rule); }
 .landing-head { margin-block-end: var(--space-xl); }
 .worker-grid { display: grid; gap: var(--rule-thin); background: var(--color-rule); border: var(--rule-thin) solid var(--color-rule); }
 .worker-card { min-width: 0; background: var(--color-paper); padding: clamp(var(--space-lg), 3vw, var(--space-xl)); display: grid; align-content: start; gap: var(--space-md); min-height: 15rem; transition: background-color var(--dur-short) var(--ease-out); }
@@ -59,6 +59,9 @@ main { padding-inline: clamp(var(--space-md), 4vw, var(--space-xl)); }
 .flow-steps div { border: var(--rule-thin) solid var(--color-rule); border-radius: var(--radius-sm); background: var(--color-paper); padding: var(--space-md); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-md); }
 .flow-steps span { color: var(--color-muted); }
 .flow-steps b { color: var(--color-ink); font-weight: 500; }
+.setup-panel { display: grid; gap: var(--space-lg); align-items: start; }
+.setup-panel .kicker { margin: 0 0 var(--space-md); }
+.setup-panel p:not(.kicker) { color: var(--color-ink-2); font-size: var(--text-md); max-width: 48rem; }
 .safety-panel { display: grid; gap: var(--space-xl); }
 .safety-panel .kicker { margin: 0 0 var(--space-md); }
 .safety-copy { display: grid; gap: var(--space-md); color: var(--color-ink-2); font-size: var(--text-md); }
@@ -73,6 +76,9 @@ main { padding-inline: clamp(var(--space-md), 4vw, var(--space-xl)); }
 .btn:disabled, button:disabled { opacity: .52; cursor: not-allowed; }
 .btn.primary:focus-visible { outline-color: var(--color-paper); box-shadow: 0 0 0 5px var(--color-focus); }
 .workbench { max-width: 88rem; margin-inline: auto; padding-block: var(--space-2xl) var(--space-3xl); }
+.workspace-banner { margin-block-end: var(--space-xl); border: var(--rule-thin) solid var(--color-rule); border-radius: var(--radius-md); background: var(--color-paper-2); padding: var(--space-lg); display: grid; gap: var(--space-lg); align-items: end; }
+.workspace-banner .kicker { margin: 0 0 var(--space-sm); }
+.workspace-banner p:not(.kicker) { color: var(--color-muted); max-width: 52rem; }
 .section-head { display: flex; justify-content: space-between; align-items: end; gap: var(--space-lg); margin-block-end: var(--space-xl); }
 .section-head p { color: var(--color-muted); }
 .metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-block: var(--rule-thin) solid var(--color-rule); margin-block-end: var(--space-xl); }
@@ -98,6 +104,20 @@ main { padding-inline: clamp(var(--space-md), 4vw, var(--space-xl)); }
 .status { font: var(--text-xs)/1 var(--font-mono); padding: var(--space-xs); border: var(--rule-thin) solid var(--color-rule-2); border-radius: var(--radius-sm); white-space: nowrap; }
 .empty { color: var(--color-muted); padding-block: var(--space-lg); }
 footer { padding: var(--space-lg) clamp(var(--space-md), 4vw, var(--space-xl)); border-block-start: var(--rule-thin) solid var(--color-rule); display: flex; justify-content: space-between; gap: var(--space-lg); color: var(--color-muted); font: var(--text-xs)/1.5 var(--font-mono); }
+.setup-page { max-width: 88rem; margin-inline: auto; }
+.setup-hero { padding-block: clamp(var(--space-2xl), 8vw, 7rem); border-block-end: var(--rule-thin) solid var(--color-rule); display: grid; gap: var(--space-lg); }
+.setup-hero .kicker { margin: 0; }
+.setup-hero h1 { max-width: 12ch; font-size: clamp(3.25rem, 8vw, 7rem); line-height: .92; letter-spacing: -0.07em; }
+.setup-hero p:not(.kicker) { max-width: 48rem; font-size: var(--text-md); color: var(--color-ink-2); }
+.setup-grid { padding-block: var(--space-2xl); display: grid; gap: var(--space-md); }
+.setup-card { border: var(--rule-thin) solid var(--color-rule); border-radius: var(--radius-md); background: var(--color-paper); padding: var(--space-lg); display: grid; gap: var(--space-md); align-content: start; }
+.setup-card > span { color: var(--color-accent); font: 600 var(--text-xs)/1 var(--font-mono); }
+.setup-card p { color: var(--color-muted); }
+.setup-pills { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+.status-pill { font: 500 var(--text-xs)/1.2 var(--font-mono); border: var(--rule-thin) solid var(--color-rule-2); border-radius: var(--radius-sm); padding: var(--space-xs); color: var(--color-muted); background: var(--color-paper-2); }
+.status-pill.ready { color: var(--color-success); background: var(--color-paper); }
+.setup-note { border-block: var(--rule-thin) solid var(--color-rule); padding-block: var(--space-xl); display: grid; gap: var(--space-lg); align-items: center; }
+.setup-note p { color: var(--color-muted); margin-block-start: var(--space-sm); }
 label { display: grid; gap: var(--space-xs); color: var(--color-ink); font-weight: 600; }
 input, textarea { width: 100%; min-height: 2.75rem; border: var(--rule-thin) solid var(--color-rule-2); outline: 2px solid transparent; outline-offset: 1px; border-radius: var(--radius-sm); background: var(--color-paper); color: var(--color-ink); padding: var(--space-sm); font-weight: 400; }
 textarea { min-height: 5rem; resize: vertical; }
@@ -128,7 +148,8 @@ input:disabled, textarea:disabled { opacity: .55; cursor: not-allowed; }
 @media (min-width: 72rem) {
   .landing-hero { grid-template-columns: minmax(0, 1.05fr) minmax(24rem, .95fr); }
   .worker-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .flow-board, .safety-panel { grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr); align-items: start; }
+  .flow-board, .setup-panel, .safety-panel, .workspace-banner, .setup-note { grid-template-columns: minmax(0, .82fr) minmax(0, 1.18fr); align-items: start; }
+  .setup-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 48rem) {
   .landing-nav { grid-template-columns: auto auto; }

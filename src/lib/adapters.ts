@@ -65,6 +65,7 @@ export async function askAI(instructions: string, input: string, webSearch = fal
 }
 
 export async function sendGmail(to: string, subject: string, body: string) {
+  if (!config.outbound.live) return { mode: "preview", channel: "gmail", to, subject };
   if (!config.google.sender || !to) return { mode: "demo", channel: "gmail", to, subject };
   const token = await googleAccessToken();
   if (!token) return { mode: "demo", channel: "gmail", to, subject };
@@ -78,6 +79,7 @@ export async function sendGmail(to: string, subject: string, body: string) {
 }
 
 export async function sendWhatsApp(to: string, body: string) {
+  if (!config.outbound.live) return { mode: "preview", channel: "whatsapp", to };
   if (!config.whatsapp.token || !config.whatsapp.phoneNumberId || !to) return { mode: "demo", channel: "whatsapp", to };
   return checked(`https://graph.facebook.com/v23.0/${config.whatsapp.phoneNumberId}/messages`, {
     method: "POST",
@@ -87,6 +89,7 @@ export async function sendWhatsApp(to: string, body: string) {
 }
 
 export async function updateWebsite(change: Record<string, unknown>) {
+  if (!config.outbound.live) return { mode: "preview", channel: "website", change };
   if (!config.website.url || !config.website.secret) return { mode: "demo", channel: "website", change };
   const body = JSON.stringify(change);
   const signature = createHmac("sha256", config.website.secret).update(body).digest("hex");

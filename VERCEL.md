@@ -23,6 +23,7 @@ Set the variables from `.env.example`, especially:
 - `GOOGLE_CLIENT_SECRET`
 - `GOOGLE_REFRESH_TOKEN`
 - `GMAIL_SENDER`
+- `OUTBOUND_SENDS_LIVE=false` for safe preview mode; set `true` only for a workspace with owned outbound channels.
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
 

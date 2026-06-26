@@ -47,6 +47,9 @@ export const config = {
     url: process.env.WEBSITE_WEBHOOK_URL || "",
     secret: process.env.WEBSITE_WEBHOOK_SECRET || ""
   },
+  outbound: {
+    live: yes(process.env.OUTBOUND_SENDS_LIVE)
+  },
   approvals: {
     research: yes(process.env.AUTO_APPROVE_RESEARCH, true),
     drafts: yes(process.env.AUTO_APPROVE_DRAFTS),
@@ -71,8 +74,12 @@ export function integrationStatus() {
     googleRefresh: googleCanRefresh,
     sheets: Boolean(googleCanAuthorize && config.google.sheetId),
     drive: Boolean(googleCanAuthorize && config.google.driveFolderId),
-    gmail: Boolean(googleCanAuthorize && config.google.sender),
-    whatsapp: Boolean(config.whatsapp.token && config.whatsapp.phoneNumberId),
-    website: Boolean(config.website.url && config.website.secret)
+    gmailReady: Boolean(googleCanAuthorize && config.google.sender),
+    gmail: Boolean(config.outbound.live && googleCanAuthorize && config.google.sender),
+    whatsappReady: Boolean(config.whatsapp.token && config.whatsapp.phoneNumberId),
+    whatsapp: Boolean(config.outbound.live && config.whatsapp.token && config.whatsapp.phoneNumberId),
+    websiteReady: Boolean(config.website.url && config.website.secret),
+    website: Boolean(config.outbound.live && config.website.url && config.website.secret),
+    outboundLive: config.outbound.live
   };
 }
