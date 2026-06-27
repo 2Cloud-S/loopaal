@@ -11,6 +11,9 @@ flowchart LR
   Workers --> Archivist["archivist"]
   Workers --> Scheduler["scheduler"]
   API --> DB[("AWS DynamoDB single table")]
+  API --> MemoryFactory["Optional Memory Factory"]
+  MemoryFactory --> Drive["Customer Google Drive"]
+  MemoryFactory --> Sheets["Customer Google Sheets"]
   Orchestrator --> DB
   API --> Gmail["Gmail adapter"]
   API --> WhatsApp["WhatsApp Cloud API adapter"]
@@ -24,6 +27,14 @@ flowchart LR
 - DynamoDB stores operational state, worker jobs, prospects, approvals, memory, scheduled actions, inbound replies, and audit events.
 - Worker code is versioned separately under the future `workers` repo and imported by the main app.
 - Gmail, WhatsApp, Sheets/Drive, and website adapters are pluggable and stay in demo mode without credentials.
+
+## Hybrid storage model
+
+DynamoDB is the canonical production database for Loopaal. It stores the operational state that the app depends on: campaigns, prospects, worker jobs, approvals, audit, connections, workspace identity, and normalized memory.
+
+Google Drive/Sheets is not the production database. It is an optional customer-owned Memory Factory for context engineering: users can inspect, edit, export, and re-import memory/context in their own Drive folder and Sheet after connecting Google and granting Drive/Sheets scopes.
+
+Campaigns must write to DynamoDB first. Drive/Sheets sync is a secondary export/import layer; if it fails or is not connected, campaign execution and core memory still work through DynamoDB and the failure is reflected in audit/logging instead of crashing the workflow.
 
 ## Data model summary
 

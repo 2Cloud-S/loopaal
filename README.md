@@ -33,6 +33,13 @@ With Supabase enabled, each signed-in user gets an isolated workspace. API route
 - [AWS.md](./AWS.md)
 - [VERCEL.md](./VERCEL.md)
 - [GMAIL.md](./GMAIL.md)
+- [MEMORY_FACTORY.md](./MEMORY_FACTORY.md)
+
+## Hybrid memory model
+
+DynamoDB is Loopaal’s canonical operational database. Google Drive/Sheets is a customer-owned Memory Factory: an optional context engineering layer where users can view, edit, export, and re-import memory.
+
+The core workflow uses DynamoDB for campaigns, prospects, approvals, audit, and normalized memory. Advanced memory management unlocks only after a user connects Google Drive/Sheets from `/setup`; until then, campaigns still work, but customer-editable memory export/import remains locked.
 
 ## Core demo flow
 

@@ -15,6 +15,9 @@
 - Optimize for one minimal operator.
 - Make worker activity visible enough for trust, not noisy.
 - Treat DynamoDB as the production source of truth.
+- Never replace DynamoDB with Sheets/Drive as the source of truth.
+- Memory Factory features are gated behind a user-owned Google Drive/Sheets connection.
+- User-edited Sheet data must be validated before it updates DynamoDB.
 - Preserve preview mode so the product remains safe without private outbound credentials.
 
 ## Engineering rules

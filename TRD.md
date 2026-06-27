@@ -40,3 +40,22 @@
 - External sends and website updates are approval-gated by default.
 - Approval alone is not enough for live execution; live outbound mode must also be enabled.
 - Outbound messages are scanned for unverifiable claims and sensitive-data requests.
+
+## Future Memory Factory API surface
+
+Memory Factory APIs are optional advanced memory-management routes. They require an authenticated workspace plus a workspace-owned Google connection with Drive/Sheets permissions.
+
+- `POST /api/memory-factory/setup` — create or reuse the customer-owned Drive folder and Google Sheet.
+- `GET /api/memory-factory/status` — return Memory Factory readiness, Drive folder link, Sheet link, and last sync status.
+- `POST /api/memory-factory/export` — export DynamoDB memory/context to Drive/Sheets.
+- `POST /api/memory-factory/import` — validate user-edited Sheet rows before updating DynamoDB.
+- `GET /api/memory-factory/context` — list retrievable Drive context snapshots.
+- `POST /api/memory-factory/context` — save a named Drive context snapshot from canonical DynamoDB state.
+
+## Hybrid persistence requirements
+
+- DynamoDB is the canonical source of truth for app data.
+- Drive/Sheets is an optional customer-owned Memory Factory for editable/exportable context management, not the production database.
+- Memory Factory features require the user to connect Google and grant Drive/Sheets permissions.
+- Campaign data must persist to DynamoDB before any Drive/Sheets export runs.
+- Drive/Sheets sync failures must create visible audit events and must not fail the core campaign workflow after DynamoDB persistence succeeds.

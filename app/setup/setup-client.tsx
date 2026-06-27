@@ -59,6 +59,17 @@ export function SetupClient() {
     }
   }
 
+  async function enableMemoryFactory() {
+    setMessage("");
+    try {
+      await api("/api/memory-factory/setup", workspaceId, { method: "POST", body: JSON.stringify({}) });
+      setMessage("Memory Factory enabled. Your Drive folder and editable Sheet are ready.");
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    }
+  }
+
   function previewConnection(provider: "google" | "whatsapp" | "website") {
     if (provider === "google") {
       const sender = google?.identity?.displayName || state?.identity?.senderName || state?.identity?.businessName || google?.label || "your business";
@@ -77,6 +88,7 @@ export function SetupClient() {
   const google = state?.connections.find(connection => connection.provider === "google" && connection.status === "connected");
   const whatsapp = state?.connections.find(connection => connection.provider === "whatsapp" && connection.status === "connected");
   const website = state?.connections.find(connection => connection.provider === "website" && connection.status === "connected");
+  const memoryFactoryEnabled = Boolean(google?.identity?.memoryFactoryEnabled && google.identity.driveFolderId && google.identity.spreadsheetId);
 
   return (
     <section className="connection-center" aria-label="Connect channels">
@@ -110,6 +122,19 @@ export function SetupClient() {
           {google ? <p className="setup-note-small">Client will see: {google.identity?.displayName || state?.identity?.senderName || state?.identity?.businessName || google.label} &lt;{google.identity?.sendAsEmail || google.identity?.email || google.label}&gt;{google.identity?.signature ? " · Gmail signature detected" : ""}</p> : null}
           <a className="btn primary" href={googleHref}>{google ? "Reconnect Google" : "Connect Google"}</a>
           <button className="btn" type="button" onClick={() => previewConnection("google")} disabled={!google}>Test draft preview</button>
+        </article>
+
+        <article className="setup-card">
+          <span>memory factory</span>
+          <h3>Drive + Sheets memory workspace</h3>
+          <p>DynamoDB stays the source of truth. Memory Factory unlocks customer-owned context editing, export, and re-import in Drive/Sheets.</p>
+          <div className="setup-pills"><span className={memoryFactoryEnabled ? "status-pill ready" : "status-pill"}>{memoryFactoryEnabled ? "enabled" : google ? "google connected · not enabled" : "connect google first"}</span></div>
+          {google?.identity?.lastMemorySyncError ? <p className="warning-text">Last sync issue: {google.identity.lastMemorySyncError.slice(0, 180)}</p> : null}
+          <button className="btn primary" type="button" onClick={enableMemoryFactory} disabled={!google}>{memoryFactoryEnabled ? "Repair / Re-sync setup" : "Enable Memory Factory"}</button>
+          {memoryFactoryEnabled ? <div className="row-actions">
+            <a className="btn" href={google?.identity?.spreadsheetUrl || "#"} target="_blank" rel="noreferrer">Open Memory Sheet</a>
+            <a className="btn" href={google?.identity?.driveFolderUrl || "#"} target="_blank" rel="noreferrer">Open Drive Folder</a>
+          </div> : null}
         </article>
 
         <form className="setup-card setup-form" onSubmit={event => saveManualConnection(event, "whatsapp")}>

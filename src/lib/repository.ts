@@ -111,6 +111,13 @@ export async function appendAudit(action: string, detail: string, actor = "loopa
   return event;
 }
 
+export async function appendWorkspaceAudit(action: string, detail: string, workspaceId?: string, actor = "loopaal") {
+  const event = workspaceId ? { ...audit(action, detail, actor), workspaceId } : audit(action, detail, actor);
+  if (useDynamoDb()) await putEntity({ entityType: "audit", ...event });
+  else await replaceState(state => { state.audit.unshift(event); }, workspaceId);
+  return event;
+}
+
 export async function saveCampaign(campaign: Campaign, workspaceId?: string) {
   const campaignWithWorkspace = workspaceId ? { ...campaign, workspaceId } : campaign;
   const event = workspaceId ? { ...audit("campaign.created", campaign.name, "operator"), workspaceId } : audit("campaign.created", campaign.name, "operator");
@@ -192,6 +199,69 @@ export async function updateProspectContact(id: string, contact: Pick<Prospect, 
     prospect.phone = contact.phone;
     prospect.updatedAt = nowIso();
     state.audit.unshift({ ...audit("prospect.contact.updated", prospect.businessName, "operator"), workspaceId: prospect.workspaceId || workspaceId });
+  }, workspaceId);
+}
+
+export async function updateConnectionIdentity(workspaceId: string, provider: Connection["provider"], identityPatch: NonNullable<Connection["identity"]>) {
+  return replaceState(state => {
+    const connection = state.connections.find(x => x.workspaceId === workspaceId && x.provider === provider && x.status === "connected");
+    if (!connection) throw new Error(`${provider} connection not found`);
+    connection.identity = { ...(connection.identity || {}), ...identityPatch };
+    connection.updatedAt = nowIso();
+    state.audit.unshift({ ...audit("connection.identity.updated", `${provider}:${connection.label}`, "operator"), workspaceId });
+  }, workspaceId);
+}
+
+export interface MemoryFactoryImportRow {
+  kind: "memory" | "prospect";
+  id: string;
+  text?: string;
+  tags?: string[];
+  status?: string;
+  website?: string;
+  contactName?: string;
+  contactRole?: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+}
+
+export async function importMemoryFactoryRows(rows: MemoryFactoryImportRow[], workspaceId?: string) {
+  let imported = 0;
+  let skipped = 0;
+  return replaceState(state => {
+    for (const row of rows) {
+      if (!row.id) {
+        skipped++;
+        continue;
+      }
+      if (row.kind === "memory") {
+        const memory = state.memories.find(x => x.id === row.id);
+        if (!memory) {
+          skipped++;
+          continue;
+        }
+        if (row.text !== undefined) memory.text = row.text;
+        if (row.tags) memory.tags = row.tags;
+        if (row.status !== undefined) memory.status = row.status;
+        imported++;
+        continue;
+      }
+      const prospect = state.prospects.find(x => x.id === row.id);
+      if (!prospect) {
+        skipped++;
+        continue;
+      }
+      if (row.website !== undefined) prospect.website = row.website;
+      if (row.contactName !== undefined) prospect.contactName = row.contactName;
+      if (row.contactRole !== undefined) prospect.contactRole = row.contactRole;
+      if (row.email !== undefined) prospect.email = row.email;
+      if (row.phone !== undefined) prospect.phone = row.phone;
+      if (row.notes !== undefined) prospect.notes = row.notes;
+      prospect.updatedAt = nowIso();
+      imported++;
+    }
+    state.audit.unshift({ ...audit("memory_factory.imported", `${imported} rows imported, ${skipped} skipped`, "operator"), workspaceId });
   }, workspaceId);
 }
 

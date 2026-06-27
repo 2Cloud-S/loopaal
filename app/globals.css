@@ -103,6 +103,7 @@ main { padding-inline: clamp(var(--space-md), 4vw, var(--space-xl)); }
 .panel-dark .row small { color: var(--color-rule-2); }
 .row-actions { display: flex; gap: var(--space-xs); flex-wrap: wrap; }
 .row-actions .btn { min-height: 2.25rem; padding: var(--space-xs) var(--space-sm); font-size: var(--text-sm); }
+.memory-factory-actions { display: grid; gap: var(--space-xs); padding-block: var(--space-md); border-block-end: var(--rule-thin) solid var(--color-rule); }
 .recipient-form { display: grid; gap: var(--space-xs); margin-block-start: var(--space-xs); }
 .recipient-form label { font-size: var(--text-xs); }
 .recipient-form input { min-height: 2.35rem; padding: var(--space-xs) var(--space-sm); font-size: var(--text-sm); }

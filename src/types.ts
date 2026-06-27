@@ -32,6 +32,7 @@ export interface Prospect {
   contactRole?: string;
   email?: string;
   phone?: string;
+  notes?: string;
   facts: string[];
   sources: string[];
   confidence: number;
@@ -45,6 +46,7 @@ export interface MemoryItem {
   scopeId: string;
   text: string;
   tags: string[];
+  status?: string;
   createdAt: string;
 }
 
@@ -119,6 +121,14 @@ export interface ConnectionIdentity {
   verifyToken?: string;
   sendAsEmail?: string;
   providerAccountId?: string;
+  memoryFactoryEnabled?: boolean;
+  driveFolderId?: string;
+  driveFolderUrl?: string;
+  spreadsheetId?: string;
+  spreadsheetUrl?: string;
+  lastMemorySyncAt?: string;
+  lastMemorySyncStatus?: "ready" | "exported" | "imported" | "failed";
+  lastMemorySyncError?: string;
 }
 
 export interface Connection {

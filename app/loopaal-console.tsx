@@ -53,6 +53,8 @@ export function LoopaalConsole() {
   }
 
   const identityReady = Boolean(state.identity?.businessName);
+  const google = state.connections.find(connection => connection.provider === "google" && connection.status === "connected");
+  const memoryFactoryEnabled = Boolean(google?.identity?.memoryFactoryEnabled && google.identity.driveFolderId && google.identity.spreadsheetId);
   const metrics = useMemo(() => [
     ["Campaigns", state.campaigns.length],
     ["Prospects", state.prospects.length],
@@ -123,6 +125,22 @@ export function LoopaalConsole() {
       await api(`/api/approvals/${id}/${action}`, workspaceId, { method: "POST", body: JSON.stringify({}) });
       await refresh();
       setNotice(action === "approve" ? "Approval processed." : "Draft rejected.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy("");
+    }
+  }
+
+  async function memoryFactoryAction(action: "export" | "import" | "context") {
+    setBusy(action === "export" ? "Exporting memory" : action === "import" ? "Importing memory" : "Saving context");
+    setError("");
+    setNotice("");
+    try {
+      const path = action === "context" ? "/api/memory-factory/context" : `/api/memory-factory/${action}`;
+      await api(path, workspaceId, { method: "POST", body: JSON.stringify(action === "context" ? { name: "workspace-context" } : {}) });
+      await refresh();
+      setNotice(action === "export" ? "Memory exported to Drive/Sheets." : action === "import" ? "Edited memory imported after validation." : "Drive context snapshot saved.");
     } catch (error) {
       setError(error instanceof Error ? error.message : String(error));
     } finally {
@@ -241,6 +259,25 @@ export function LoopaalConsole() {
 
             <section className="panel">
               <header><h3>Memory</h3><span>saved context</span></header>
+              <div className="memory-factory-actions">
+                {memoryFactoryEnabled ? (
+                  <>
+                    <div className="row-actions">
+                      <button className="btn" onClick={() => memoryFactoryAction("export")} disabled={Boolean(busy)}>Export Memory</button>
+                      <button className="btn" onClick={() => memoryFactoryAction("import")} disabled={Boolean(busy)}>Import Edited Memory</button>
+                      <button className="btn" onClick={() => memoryFactoryAction("context")} disabled={Boolean(busy)}>Save Context Snapshot</button>
+                    </div>
+                    <div className="row-actions">
+                      <a className="small-link" href={google?.identity?.spreadsheetUrl || "#"} target="_blank" rel="noreferrer">Open Memory Sheet</a>
+                      <a className="small-link" href={google?.identity?.driveFolderUrl || "#"} target="_blank" rel="noreferrer">Open Drive Folder</a>
+                    </div>
+                    {google?.identity?.lastMemorySyncStatus ? <small>Last memory sync: {google.identity.lastMemorySyncStatus}{google.identity.lastMemorySyncAt ? ` · ${google.identity.lastMemorySyncAt}` : ""}</small> : null}
+                    {google?.identity?.lastMemorySyncError ? <small className="warning-text">{google.identity.lastMemorySyncError.slice(0, 180)}</small> : null}
+                  </>
+                ) : (
+                  <p className="empty">Connect Google and enable Memory Factory in setup to unlock customer-editable Drive/Sheets memory management.</p>
+                )}
+              </div>
               <div className="rows">
                 {state.memories.length ? state.memories.slice(0, 6).map(memory => <article className="row" key={memory.id}><b>{memory.scope}</b><small>{memory.text}</small></article>) : <p className="empty">Memory appears after a worker run or inbound reply.</p>}
               </div>

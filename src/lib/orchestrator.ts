@@ -6,6 +6,7 @@ import { outboundRisk } from "./policies.ts";
 import { loadState, newWorkerJob, remember, patchApproval, saveApproval, saveCampaign, saveRunArtifacts, setCampaignStatus, updateApproval } from "./repository.ts";
 import { askAI, createGmailDraft, sendGmail, sendWhatsApp, updateWebsite } from "./adapters.ts";
 import { config } from "./config.ts";
+import { exportMemoryFactory } from "./memory-factory.ts";
 import type { Approval, Campaign, MemoryItem, Prospect, WorkerJob, WorkspaceIdentity } from "../types.ts";
 
 export async function createCampaign(name: string, raw: Record<string, unknown>, workspaceId?: string) {
@@ -32,7 +33,9 @@ export async function runCampaign(id: string, workspaceId?: string) {
     { ...audit("coworkers.completed", `${jobs.length} co-workers reported for ${campaign.name}`), workspaceId },
     { ...audit("campaign.completed", `${prospects.length} prospects processed`), workspaceId }
   ];
-  return saveRunArtifacts(prospects, jobs, events, memoryResults, workspaceId);
+  const saved = await saveRunArtifacts(prospects, jobs, events, memoryResults, workspaceId);
+  if (workspaceId) await exportMemoryFactory(workspaceId, id).catch(() => undefined);
+  return saved;
 }
 
 export async function draftOutreach(prospectId: string, channel: "gmail" | "whatsapp", workspaceId?: string) {

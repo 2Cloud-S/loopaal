@@ -10,7 +10,7 @@ async function checked(url: string, init: RequestInit) {
 
 const cachedGoogleTokens = new Map<string, { accessToken: string; expiresAt: number }>();
 
-async function googleAccessToken(connection?: Connection) {
+export async function googleAccessToken(connection?: Connection) {
   if (connection?.accessToken && connection.expiresAt && new Date(connection.expiresAt).getTime() > Date.now() + 60_000) return connection.accessToken;
   const refreshToken = connection?.refreshToken || config.google.refreshToken;
   const cacheKey = connection?.id || refreshToken || "env";
