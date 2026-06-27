@@ -16,9 +16,10 @@ export default function Page() {
           <a href="#workflow">workflow</a>
           <a href="#safety">safety</a>
           <a href="/setup">setup</a>
+          <a href="/sign-in">sign in</a>
           <a href="/dashboard">console</a>
         </div>
-        <a className="btn compact" href="/setup">Start setup</a>
+        <a className="btn compact" href="/sign-up">Start setup</a>
       </nav>
 
       <main className="landing">
@@ -30,7 +31,7 @@ export default function Page() {
               Loopaal turns volatile B2B targeting criteria into researched prospects, contextual outreach, durable memory, and approval-gated actions.
             </p>
             <div className="hero-actions">
-              <a className="btn primary" href="/setup">Start onboarding</a>
+              <a className="btn primary" href="/sign-up">Start onboarding</a>
               <a className="btn" href="#workflow">See how it runs</a>
             </div>
           </div>

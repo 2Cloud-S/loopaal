@@ -16,9 +16,11 @@ Open `http://localhost:3000`. The product starts with workspace setup, then move
 
 With `LOOPAAL_STORE=demo`, loopaal uses local demo persistence. With `LOOPAAL_STORE=dynamodb` and AWS credentials, it writes to DynamoDB. Set `AI_PROVIDER=gemini` with `GEMINI_API_KEY` for Gemini-powered drafts, or leave `AI_PROVIDER=demo` for deterministic copy.
 
+Set `NEXT_PUBLIC_SUPABASE_URL` and either `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable Supabase Auth. Without those variables, Loopaal keeps a local demo workspace fallback for development.
+
 External sends are safe by default. Gmail, WhatsApp, and website updates run in preview mode unless `OUTBOUND_SENDS_LIVE=true` is set for a workspace with owned channel credentials.
 
-Each browser gets a workspace id stored in local storage. API requests include that workspace id so new consumers start with empty campaigns/prospects/approvals instead of seeing another operator's data.
+With Supabase enabled, each signed-in user gets an isolated workspace. API routes resolve the workspace from the server-verified Supabase session. Local-storage workspace IDs are used only in demo auth mode.
 
 ## Hackathon docs
 
@@ -38,7 +40,7 @@ Each browser gets a workspace id stored in local storage. API requests include t
 2. Create a campaign from volatile targeting criteria.
 3. Launch co-workers in parallel.
 4. Persist prospects, worker jobs, memory, approvals, and audit events.
-5. Draft email or WhatsApp outreach.
+5. Draft email or WhatsApp outreach. Gmail creates a real Gmail Draft when Google is connected and the prospect has a verified email.
 6. Approve or reject the proposed action.
 
 ## Safety model
@@ -46,7 +48,7 @@ Each browser gets a workspace id stored in local storage. API requests include t
 - Research and drafting may run automatically.
 - Email, WhatsApp, and website changes require approval by default.
 - Real external actions require `OUTBOUND_SENDS_LIVE=true`; otherwise approved actions remain non-destructive previews.
-- Gmail should use a dedicated sending mailbox and the `gmail.send` scope, not a personal main inbox.
+- Gmail should use a dedicated business mailbox and the `gmail.compose` scope, not a personal main inbox.
 - Consumers connect Google from `/setup`; OAuth tokens are saved against their workspace, not treated as global sender identity.
 - Demo mode never sends real external messages.
 - Every meaningful transition is written to the audit log.

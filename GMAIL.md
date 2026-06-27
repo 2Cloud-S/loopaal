@@ -1,18 +1,18 @@
 # Gmail API setup for Loopaal
 
-Loopaal supports Gmail sending through either a short-lived `GOOGLE_ACCESS_TOKEN` or a safer refresh-token setup. For demos and Vercel deployments, prefer refresh tokens so the app can request fresh access tokens automatically.
+Loopaal now uses Gmail as a customer-owned draft workspace. The default email flow creates a real Gmail Draft from `/setup`-connected Google accounts, then keeps any direct sending approval-gated.
 
 ## Recommended privacy setup
 
-Do not use your personal main Gmail inbox as the product identity. Create a dedicated mailbox such as `loopaal.outreach@gmail.com` or `loopaal@yourdomain.com`, then connect only that mailbox to Loopaal.
+Do not use a personal main inbox as the product identity. Create or connect a dedicated business mailbox such as `loopaal.outreach@gmail.com` or `outreach@yourdomain.com`.
 
 Recommended controls:
 
-- Use the narrow Gmail scope: `https://www.googleapis.com/auth/gmail.send`.
+- Use the narrow draft scope: `https://www.googleapis.com/auth/gmail.compose`.
 - Keep sends approval-gated with `AUTO_APPROVE_SEND=false`.
-- Do not enable inbox-reading scopes for the hackathon unless the demo explicitly needs reply ingestion.
+- Do not add inbox-reading scopes unless reply ingestion is intentionally implemented.
 - Keep credentials only in `.env` and Vercel environment variables.
-- If you use a Google Workspace domain, use a sender alias like `outreach@yourdomain.com` rather than a personal address.
+- Let each consumer connect their own Google account from `/setup`; do not share the founder’s mailbox across customers.
 
 ## Google Cloud OAuth client
 
@@ -25,59 +25,47 @@ http://localhost:3000
 https://your-loopaal-vercel-url.vercel.app
 ```
 
-Authorized redirect URIs for OAuth Playground token generation:
+Authorized redirect URIs:
 
 ```txt
-https://developers.google.com/oauthplayground
+http://localhost:3000/api/connections/google/callback
+https://your-loopaal-vercel-url.vercel.app/api/connections/google/callback
 ```
 
-If Loopaal later adds an in-app OAuth callback, add these too:
-
-```txt
-http://localhost:3000/api/auth/google/callback
-https://your-loopaal-vercel-url.vercel.app/api/auth/google/callback
-```
+The redirect URI must exactly match `GOOGLE_REDIRECT_URI` or the URL derived from `NEXT_PUBLIC_APP_URL`. A mismatch causes Google’s `redirect_uri_mismatch` error.
 
 ## Required APIs and scopes
 
 Enable the Gmail API in Google Cloud.
 
-Use this scope for sending only:
+Loopaal requests:
 
 ```txt
-https://www.googleapis.com/auth/gmail.send
+openid
+https://www.googleapis.com/auth/userinfo.email
+https://www.googleapis.com/auth/gmail.compose
+https://www.googleapis.com/auth/drive.file
+https://www.googleapis.com/auth/spreadsheets
 ```
 
-Only add read scopes later if reply ingestion becomes part of the judged demo.
-
-## Get a refresh token with OAuth Playground
-
-1. Open https://developers.google.com/oauthplayground.
-2. Click the gear icon.
-3. Enable `Use your own OAuth credentials`.
-4. Paste your Google OAuth client ID and client secret.
-5. In the left panel, enter or select:
-
-```txt
-https://www.googleapis.com/auth/gmail.send
-```
-
-6. Click `Authorize APIs`.
-7. Sign in with the dedicated Loopaal sending mailbox.
-8. Exchange the authorization code for tokens.
-9. Copy the refresh token into `.env`.
+Only add `https://www.googleapis.com/auth/gmail.send` if you intentionally support direct sending after approval.
 
 ## Environment variables
 
 ```env
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-GOOGLE_REFRESH_TOKEN=
-GMAIL_SENDER=loopaal.outreach@gmail.com
+GOOGLE_REDIRECT_URI=http://localhost:3000/api/connections/google/callback
 ```
 
-`GOOGLE_ACCESS_TOKEN` is optional when the refresh-token variables are present.
+Consumer Google refresh tokens are saved as workspace connections after OAuth. `GOOGLE_REFRESH_TOKEN` is optional legacy/demo fallback only.
 
 ## Test behavior
 
-When an approved email action executes, Loopaal refreshes the Gmail access token in memory, sends through Gmail API, and does not persist the short-lived access token.
+After a prospect has a verified email and Google is connected, clicking `Draft email` creates:
+
+1. a Loopaal approval/audit record, and
+2. a real Gmail Draft in the connected mailbox.
+
+If no recipient email exists, Loopaal creates only an internal editable draft and marks the recipient as missing.

@@ -1,4 +1,5 @@
 import { integrationStatus } from "../../src/lib/config.ts";
+import { requirePageUser } from "../../src/lib/auth.ts";
 import { SetupClient } from "./setup-client.tsx";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +8,8 @@ function StatusPill({ ready, label }: { ready: boolean; label: string }) {
   return <span className={ready ? "status-pill ready" : "status-pill"}>{ready ? "ready" : "not connected"} · {label}</span>;
 }
 
-export default function SetupPage() {
+export default async function SetupPage() {
+  await requirePageUser();
   const status = integrationStatus();
   const platformReady = Boolean(status.dynamodb && status.gemini);
   const customerChannelsReady = Boolean(status.gmail || status.whatsapp || status.website);
@@ -45,7 +47,7 @@ export default function SetupPage() {
           <article className="setup-card">
             <span>02</span>
             <h2>Connect owned channels</h2>
-            <p>Use a dedicated business sender, not a personal inbox. Gmail should use send-only OAuth. WhatsApp and website updates should use business-owned API credentials.</p>
+            <p>Use a dedicated business sender, not a personal inbox. Gmail uses compose OAuth so Loopaal can create drafts for review. WhatsApp and website updates should use business-owned API credentials.</p>
             <div className="setup-pills">
               <StatusPill ready={Boolean(status.gmailReady)} label="Gmail configured" />
               <StatusPill ready={Boolean(status.whatsappReady)} label="WhatsApp configured" />

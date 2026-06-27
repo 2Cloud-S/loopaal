@@ -1,6 +1,6 @@
 import { createHmac } from "node:crypto";
 import { config } from "./config.ts";
-import type { Connection } from "../types.ts";
+import type { Connection, WorkspaceIdentity } from "../types.ts";
 
 async function checked(url: string, init: RequestInit) {
   const response = await fetch(url, init);
@@ -8,11 +8,13 @@ async function checked(url: string, init: RequestInit) {
   return response.json().catch(() => ({}));
 }
 
-let cachedGoogleToken: { accessToken: string; expiresAt: number } | undefined;
+const cachedGoogleTokens = new Map<string, { accessToken: string; expiresAt: number }>();
 
 async function googleAccessToken(connection?: Connection) {
   if (connection?.accessToken && connection.expiresAt && new Date(connection.expiresAt).getTime() > Date.now() + 60_000) return connection.accessToken;
   const refreshToken = connection?.refreshToken || config.google.refreshToken;
+  const cacheKey = connection?.id || refreshToken || "env";
+  const cachedGoogleToken = cachedGoogleTokens.get(cacheKey);
   if (cachedGoogleToken && cachedGoogleToken.expiresAt > Date.now() + 60_000) return cachedGoogleToken.accessToken;
   if (refreshToken && config.google.clientId && config.google.clientSecret) {
     const data = await checked("https://oauth2.googleapis.com/token", {
@@ -26,11 +28,11 @@ async function googleAccessToken(connection?: Connection) {
       })
     }) as { access_token?: string; expires_in?: number };
     if (!data.access_token) throw new Error("Google OAuth refresh did not return an access token");
-    cachedGoogleToken = {
+    cachedGoogleTokens.set(cacheKey, {
       accessToken: data.access_token,
       expiresAt: Date.now() + Math.max(1, data.expires_in || 3600) * 1000
-    };
-    return cachedGoogleToken.accessToken;
+    });
+    return data.access_token;
   }
   return config.google.token;
 }
@@ -69,11 +71,11 @@ export async function askAI(instructions: string, input: string, webSearch = fal
 
 export async function sendGmail(to: string, subject: string, body: string, connection?: Connection) {
   if (!config.outbound.live) return { mode: "preview", channel: "gmail", to, subject };
-  const sender = connection?.label.includes("@") ? connection.label : config.google.sender;
+  const sender = gmailSender(connection);
   if (!sender || !to) return { mode: "demo", channel: "gmail", to, subject };
   const token = await googleAccessToken(connection);
   if (!token) return { mode: "demo", channel: "gmail", to, subject };
-  const mime = `From: ${sender}\r\nTo: ${to}\r\nSubject: ${subject}\r\nContent-Type: text/plain; charset=UTF-8\r\n\r\n${body}`;
+  const mime = buildEmailMime({ from: sender, replyTo: connection?.identity?.replyTo, to, subject, body, signature: connection?.identity?.signature });
   const raw = Buffer.from(mime).toString("base64url");
   return checked("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
     method: "POST",
@@ -82,20 +84,100 @@ export async function sendGmail(to: string, subject: string, body: string, conne
   });
 }
 
-export async function sendWhatsApp(to: string, body: string) {
-  if (!config.outbound.live) return { mode: "preview", channel: "whatsapp", to };
-  if (!config.whatsapp.token || !config.whatsapp.phoneNumberId || !to) return { mode: "demo", channel: "whatsapp", to };
-  return checked(`https://graph.facebook.com/v23.0/${config.whatsapp.phoneNumberId}/messages`, {
+function gmailSender(connection?: Connection, workspaceIdentity?: WorkspaceIdentity) {
+  const email = connection?.identity?.sendAsEmail || connection?.identity?.email || (connection?.label.includes("@") ? connection.label : "") || config.google.sender;
+  if (!email) return "";
+  const name = connection?.identity?.displayName || workspaceIdentity?.senderName || workspaceIdentity?.businessName || "";
+  return name && !email.includes("<") ? `${name} <${email}>` : email;
+}
+
+function escapeHtml(value: string) {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function plainToHtml(value: string) {
+  return escapeHtml(value).replace(/\r?\n/g, "<br>");
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+}
+
+function buildEmailMime(input: { from: string; replyTo?: string; to: string; subject: string; body: string; signature?: string; workspaceSignature?: string }) {
+  const signature = input.signature || input.workspaceSignature || "";
+  const headers = [
+    `From: ${input.from}`,
+    input.replyTo ? `Reply-To: ${input.replyTo}` : "",
+    `To: ${input.to}`,
+    `Subject: ${input.subject}`,
+    "MIME-Version: 1.0"
+  ].filter(Boolean);
+  const signatureLooksHtml = /<\/?[a-z][\s\S]*>/i.test(signature);
+  if (signatureLooksHtml) {
+    const htmlBody = `${plainToHtml(input.body)}${signature ? `<br><br>${signature}` : ""}`;
+    return [...headers, "Content-Type: text/html; charset=UTF-8", "", htmlBody].join("\r\n");
+  }
+  const textBody = `${input.body}${signature ? `\n\n${stripHtml(signature)}` : ""}`;
+  return [...headers, "Content-Type: text/plain; charset=UTF-8", "", textBody].join("\r\n");
+}
+
+export async function createGmailDraft(to: string, subject: string, body: string, connection?: Connection, workspaceIdentity?: WorkspaceIdentity) {
+  const sender = gmailSender(connection, workspaceIdentity);
+  if (!connection || !sender || !to) return { mode: "internal", channel: "gmail", to, subject };
+  const token = await googleAccessToken(connection);
+  if (!token) return { mode: "internal", channel: "gmail", to, subject };
+  const mime = buildEmailMime({
+    from: sender,
+    replyTo: connection.identity?.replyTo || workspaceIdentity?.replyTo,
+    to,
+    subject,
+    body,
+    signature: connection.identity?.signature,
+    workspaceSignature: workspaceIdentity?.defaultSignature
+  });
+  const raw = Buffer.from(mime).toString("base64url");
+  const data = await checked("https://gmail.googleapis.com/gmail/v1/users/me/drafts", {
     method: "POST",
-    headers: { Authorization: `Bearer ${config.whatsapp.token}`, "Content-Type": "application/json" },
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ message: { raw } })
+  }) as { id?: string; message?: { id?: string; threadId?: string } };
+  return {
+    mode: "gmail_draft",
+    channel: "gmail",
+    to,
+    subject,
+    from: sender,
+    replyTo: connection.identity?.replyTo || workspaceIdentity?.replyTo || "",
+    signatureApplied: Boolean(connection.identity?.signature || workspaceIdentity?.defaultSignature),
+    draftId: data.id || "",
+    messageId: data.message?.id || "",
+    threadId: data.message?.threadId || "",
+    url: "https://mail.google.com/mail/u/0/#drafts"
+  };
+}
+
+export async function sendWhatsApp(to: string, body: string, connection?: Connection) {
+  const business = connection?.identity?.businessName || connection?.identity?.displayName || "WhatsApp Business";
+  if (!config.outbound.live) return { mode: "preview", channel: "whatsapp", to, business };
+  const token = connection?.accessToken || config.whatsapp.token;
+  const phoneNumberId = connection?.identity?.phoneNumberId || connection?.label || config.whatsapp.phoneNumberId;
+  if (!token || !phoneNumberId || !to) return { mode: "demo", channel: "whatsapp", to };
+  return checked(`https://graph.facebook.com/v23.0/${phoneNumberId}/messages`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
     body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body, preview_url: false } })
   });
 }
 
-export async function updateWebsite(change: Record<string, unknown>) {
-  if (!config.outbound.live) return { mode: "preview", channel: "website", change };
-  if (!config.website.url || !config.website.secret) return { mode: "demo", channel: "website", change };
-  const body = JSON.stringify(change);
-  const signature = createHmac("sha256", config.website.secret).update(body).digest("hex");
-  return checked(config.website.url, { method: "POST", headers: { "Content-Type": "application/json", "X-Loopaal-Signature": signature }, body });
+export async function updateWebsite(change: Record<string, unknown>, connection?: Connection) {
+  const actor = connection?.identity?.businessName || connection?.identity?.displayName || "workspace";
+  const domain = connection?.identity?.domain || "";
+  const attributedChange = { ...change, actor, domain };
+  if (!config.outbound.live) return { mode: "preview", channel: "website", change: attributedChange, actor, domain };
+  const url = connection?.identity?.webhookUrl || connection?.label || config.website.url;
+  const secret = connection?.accessToken || config.website.secret;
+  if (!url || !secret) return { mode: "demo", channel: "website", change: attributedChange, actor, domain };
+  const body = JSON.stringify(attributedChange);
+  const signature = createHmac("sha256", secret).update(body).digest("hex");
+  return checked(url, { method: "POST", headers: { "Content-Type": "application/json", "X-Loopaal-Signature": signature, "X-Loopaal-Actor": actor }, body });
 }

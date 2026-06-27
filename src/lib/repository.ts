@@ -4,7 +4,7 @@ import { dynamoRequest, marshal, unmarshal } from "./dynamodb.ts";
 import { keysFor, type StoredEntity } from "./dynamo-keys.ts";
 import { audit, makeId, nowIso } from "./ids.ts";
 import { config, useDynamoDb } from "./config.ts";
-import type { AppState, AuditEvent, Campaign, MemoryItem, Prospect, Approval, WorkerJob, Connection } from "../types.ts";
+import type { AppState, AuditEvent, Campaign, MemoryItem, Prospect, Approval, WorkerJob, Connection, WorkspaceIdentity } from "../types.ts";
 
 const demoFile = join(process.cwd(), "data", "loopaal.json");
 const emptyState = (): AppState => ({ campaigns: [], prospects: [], memories: [], approvals: [], workerJobs: [], audit: [], connections: [] });
@@ -45,7 +45,8 @@ function toState(entities: StoredEntity[]): AppState {
     approvals: entities.filter((x): x is StoredEntity & Approval => x.entityType === "approval").sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     workerJobs: entities.filter((x): x is StoredEntity & WorkerJob => x.entityType === "workerJob").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     audit: entities.filter((x): x is StoredEntity & AuditEvent => x.entityType === "audit").sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-    connections: entities.filter((x): x is StoredEntity & Connection => x.entityType === "connection").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    connections: entities.filter((x): x is StoredEntity & Connection => x.entityType === "connection").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
+    identity: entities.find((x): x is StoredEntity & WorkspaceIdentity => x.entityType === "workspaceIdentity")
   };
 }
 
@@ -62,7 +63,8 @@ function scopedState(state: AppState, workspaceId?: string): AppState {
     memories: state.memories.filter(x => x.workspaceId === workspaceId || campaignIds.has(x.scopeId) || x.tags.some(tag => campaignIds.has(tag))),
     approvals: state.approvals.filter(x => x.workspaceId === workspaceId || prospectIds.has(String(x.payload.prospectId || ""))),
     audit: state.audit.filter(x => x.workspaceId === workspaceId || campaigns.some(campaign => x.detail.includes(campaign.id) || x.detail.includes(campaign.name))),
-    connections: state.connections.filter(x => x.workspaceId === workspaceId)
+    connections: state.connections.filter(x => x.workspaceId === workspaceId),
+    identity: state.identity?.workspaceId === workspaceId ? state.identity : undefined
   };
 }
 
@@ -89,7 +91,8 @@ export async function replaceState(mutator: (state: AppState) => void | Promise<
         ...state.approvals.map(x => ({ entityType: "approval" as const, ...x })),
         ...state.workerJobs.map(x => ({ entityType: "workerJob" as const, ...x })),
         ...state.audit.map(x => ({ entityType: "audit" as const, ...x })),
-        ...state.connections.map(x => ({ entityType: "connection" as const, ...x }))
+        ...state.connections.map(x => ({ entityType: "connection" as const, ...x })),
+        ...(state.identity ? [{ entityType: "workspaceIdentity" as const, ...state.identity }] : [])
       ];
       await Promise.all(entities.map(putEntity));
     } else {
@@ -123,18 +126,18 @@ export async function saveCampaign(campaign: Campaign, workspaceId?: string) {
   return campaignWithWorkspace;
 }
 
-export async function remember(scope: MemoryItem["scope"], scopeId: string, text: string, tags: string[] = []) {
-  const memory: MemoryItem = { id: makeId("mem"), scope, scopeId, text, tags, createdAt: nowIso() };
-  const event = audit("memory.saved", `${scope}:${scopeId}`);
+export async function remember(scope: MemoryItem["scope"], scopeId: string, text: string, tags: string[] = [], workspaceId?: string) {
+  const memory: MemoryItem = { id: makeId("mem"), workspaceId, scope, scopeId, text, tags, createdAt: nowIso() };
+  const event = workspaceId ? { ...audit("memory.saved", `${scope}:${scopeId}`), workspaceId } : audit("memory.saved", `${scope}:${scopeId}`);
   if (useDynamoDb()) {
     await putEntity({ entityType: "memory", ...memory });
     await putEntity({ entityType: "audit", ...event });
-    return loadState();
+    return loadState(workspaceId);
   }
   return replaceState(state => {
     state.memories.unshift(memory);
     state.audit.unshift(event);
-  });
+  }, workspaceId);
 }
 
 export async function saveRunArtifacts(prospects: Prospect[], jobs: WorkerJob[], events: AuditEvent[], memories: MemoryItem[] = [], workspaceId?: string) {
@@ -181,6 +184,29 @@ export async function saveApproval(approval: Approval, workspaceId?: string) {
   return scopedApproval;
 }
 
+export async function updateProspectContact(id: string, contact: Pick<Prospect, "email" | "phone">, workspaceId?: string) {
+  return replaceState(state => {
+    const prospect = state.prospects.find(x => x.id === id);
+    if (!prospect) throw new Error("Prospect not found");
+    prospect.email = contact.email;
+    prospect.phone = contact.phone;
+    prospect.updatedAt = nowIso();
+    state.audit.unshift({ ...audit("prospect.contact.updated", prospect.businessName, "operator"), workspaceId: prospect.workspaceId || workspaceId });
+  }, workspaceId);
+}
+
+export async function patchApproval(id: string, patch: Partial<Pick<Approval, "status" | "scheduledFor" | "payload">>, workspaceId?: string) {
+  return replaceState(state => {
+    const approval = state.approvals.find(x => x.id === id);
+    if (!approval) throw new Error("Approval not found");
+    if (patch.status) approval.status = patch.status;
+    if (patch.scheduledFor) approval.scheduledFor = patch.scheduledFor;
+    if (patch.payload) approval.payload = { ...approval.payload, ...patch.payload };
+    approval.updatedAt = nowIso();
+    state.audit.unshift({ ...audit(`approval.${patch.status || "updated"}`, approval.title, "operator"), workspaceId: approval.workspaceId || workspaceId });
+  }, workspaceId);
+}
+
 export async function setCampaignStatus(id: string, status: Campaign["status"], workspaceId?: string) {
   return replaceState(state => {
     const campaign = state.campaigns.find(x => x.id === id);
@@ -198,6 +224,32 @@ export async function updateApproval(id: string, status: Approval["status"], sch
     approval.updatedAt = nowIso();
     state.audit.unshift(audit(`approval.${status}`, approval.title, "operator"));
   }, workspaceId);
+}
+
+export async function saveWorkspaceIdentity(input: Partial<WorkspaceIdentity> & { workspaceId: string }) {
+  const now = nowIso();
+  const identity: WorkspaceIdentity = {
+    workspaceId: input.workspaceId,
+    businessName: String(input.businessName || "").trim(),
+    senderName: String(input.senderName || "").trim(),
+    replyTo: String(input.replyTo || "").trim(),
+    defaultTone: String(input.defaultTone || "").trim(),
+    websiteUrl: String(input.websiteUrl || "").trim(),
+    defaultSignature: String(input.defaultSignature || "").trim(),
+    createdAt: input.createdAt || now,
+    updatedAt: now
+  };
+  if (!identity.businessName) throw new Error("Business name is required");
+  if (useDynamoDb()) {
+    await putEntity({ entityType: "workspaceIdentity", ...identity });
+    await putEntity({ entityType: "audit", ...audit("workspace.identity.saved", identity.businessName, "operator"), workspaceId: identity.workspaceId });
+    return identity;
+  }
+  await replaceState(state => {
+    state.identity = identity;
+    state.audit.unshift({ ...audit("workspace.identity.saved", identity.businessName, "operator"), workspaceId: identity.workspaceId });
+  }, identity.workspaceId);
+  return identity;
 }
 
 export async function saveConnection(connection: Connection) {

@@ -52,7 +52,7 @@ export interface Approval {
   id: string;
   workspaceId?: string;
   kind: ApprovalKind;
-  status: "pending" | "approved" | "rejected" | "executed" | "failed";
+  status: "pending" | "approved" | "rejected" | "executed" | "failed" | "previewed" | "draft_created" | "sent";
   title: string;
   payload: Record<string, unknown>;
   scheduledFor?: string;
@@ -90,6 +90,35 @@ export interface AppState {
   workerJobs: WorkerJob[];
   audit: AuditEvent[];
   connections: Connection[];
+  identity?: WorkspaceIdentity;
+}
+
+export interface WorkspaceIdentity {
+  workspaceId: string;
+  businessName: string;
+  senderName?: string;
+  replyTo?: string;
+  defaultTone?: string;
+  websiteUrl?: string;
+  defaultSignature?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConnectionIdentity {
+  displayName?: string;
+  email?: string;
+  replyTo?: string;
+  signature?: string;
+  businessName?: string;
+  phoneNumber?: string;
+  phoneNumberId?: string;
+  domain?: string;
+  destinationLabel?: string;
+  webhookUrl?: string;
+  verifyToken?: string;
+  sendAsEmail?: string;
+  providerAccountId?: string;
 }
 
 export interface Connection {
@@ -99,6 +128,7 @@ export interface Connection {
   status: "connected" | "needs_setup";
   scopes: string[];
   label: string;
+  identity?: ConnectionIdentity;
   accessToken?: string;
   refreshToken?: string;
   expiresAt?: string;
