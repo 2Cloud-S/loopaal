@@ -93,6 +93,17 @@ export interface AppState {
   audit: AuditEvent[];
   connections: Connection[];
   identity?: WorkspaceIdentity;
+  onboarding?: OnboardingState;
+}
+
+export type OnboardingStatus = "not_started" | "active" | "completed" | "dismissed";
+
+export interface OnboardingState {
+  workspaceId: string;
+  status: OnboardingStatus;
+  completedStepIds: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface WorkspaceIdentity {
@@ -129,12 +140,15 @@ export interface ConnectionIdentity {
   lastMemorySyncAt?: string;
   lastMemorySyncStatus?: "ready" | "exported" | "imported" | "failed";
   lastMemorySyncError?: string;
+  aiProvider?: string;
+  model?: string;
+  tokenRef?: string;
 }
 
 export interface Connection {
   id: string;
   workspaceId: string;
-  provider: "google" | "whatsapp" | "website";
+  provider: "google" | "whatsapp" | "website" | "ai";
   status: "connected" | "needs_setup";
   scopes: string[];
   label: string;

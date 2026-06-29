@@ -14,7 +14,7 @@ npm run dev
 
 Open `http://localhost:3000`. The product starts with workspace setup, then moves users into `/dashboard`.
 
-With `LOOPAAL_STORE=demo`, loopaal uses local demo persistence. With `LOOPAAL_STORE=dynamodb` and AWS credentials, it writes to DynamoDB. Set `AI_PROVIDER=gemini` with `GEMINI_API_KEY` for Gemini-powered drafts, or leave `AI_PROVIDER=demo` for deterministic copy.
+With `LOOPAAL_STORE=demo`, loopaal uses local demo persistence. With `LOOPAAL_STORE=dynamodb` and AWS credentials, it writes to DynamoDB. Platform AI keys are used only for Loopaal's limited trial AI; customer-owned long-term AI must use OAuth or a secure server-side vault, never raw API keys in the app database.
 
 Set `NEXT_PUBLIC_SUPABASE_URL` and either `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable Supabase Auth. Without those variables, Loopaal keeps a local demo workspace fallback for development.
 
@@ -34,6 +34,7 @@ With Supabase enabled, each signed-in user gets an isolated workspace. API route
 - [VERCEL.md](./VERCEL.md)
 - [GMAIL.md](./GMAIL.md)
 - [MEMORY_FACTORY.md](./MEMORY_FACTORY.md)
+- [WEBSITE_WEBHOOKS.md](./WEBSITE_WEBHOOKS.md)
 
 ## Hybrid memory model
 
@@ -53,10 +54,13 @@ The core workflow uses DynamoDB for campaigns, prospects, approvals, audit, and 
 ## Safety model
 
 - Research and drafting may run automatically.
+- Loopaal trial AI is limited to 5 campaigns per workspace; after that, customers must connect a secure AI provider.
+- Customer AI credentials must use OAuth or a secure vault reference. Raw AI API keys are not stored in DynamoDB, local storage, or session storage.
 - Email, WhatsApp, and website changes require approval by default.
 - Real external actions require `OUTBOUND_SENDS_LIVE=true`; otherwise approved actions remain non-destructive previews.
 - Gmail should use a dedicated business mailbox and the `gmail.compose` scope, not a personal main inbox.
 - Consumers connect Google from `/setup`; OAuth tokens are saved against their workspace, not treated as global sender identity.
+- Website updates use a signed HTTPS webhook contract. Cloudflare Workers are supported for the demo, but customers can connect any platform that can verify `X-Loopaal-Signature`.
 - Demo mode never sends real external messages.
 - Every meaningful transition is written to the audit log.
 - Public-web research must respect source terms, privacy rules, opt-outs, and applicable anti-spam laws.

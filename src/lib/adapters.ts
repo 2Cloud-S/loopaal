@@ -12,8 +12,8 @@ const cachedGoogleTokens = new Map<string, { accessToken: string; expiresAt: num
 
 export async function googleAccessToken(connection?: Connection) {
   if (connection?.accessToken && connection.expiresAt && new Date(connection.expiresAt).getTime() > Date.now() + 60_000) return connection.accessToken;
-  const refreshToken = connection?.refreshToken || config.google.refreshToken;
-  const cacheKey = connection?.id || refreshToken || "env";
+  const refreshToken = connection?.refreshToken;
+  const cacheKey = connection?.id || refreshToken || "";
   const cachedGoogleToken = cachedGoogleTokens.get(cacheKey);
   if (cachedGoogleToken && cachedGoogleToken.expiresAt > Date.now() + 60_000) return cachedGoogleToken.accessToken;
   if (refreshToken && config.google.clientId && config.google.clientSecret) {
@@ -34,7 +34,7 @@ export async function googleAccessToken(connection?: Connection) {
     });
     return data.access_token;
   }
-  return config.google.token;
+  return "";
 }
 
 export async function askOpenAI(instructions: string, input: string, webSearch = false) {
@@ -85,7 +85,7 @@ export async function sendGmail(to: string, subject: string, body: string, conne
 }
 
 function gmailSender(connection?: Connection, workspaceIdentity?: WorkspaceIdentity) {
-  const email = connection?.identity?.sendAsEmail || connection?.identity?.email || (connection?.label.includes("@") ? connection.label : "") || config.google.sender;
+  const email = connection?.identity?.sendAsEmail || connection?.identity?.email || (connection?.label.includes("@") ? connection.label : "");
   if (!email) return "";
   const name = connection?.identity?.displayName || workspaceIdentity?.senderName || workspaceIdentity?.businessName || "";
   return name && !email.includes("<") ? `${name} <${email}>` : email;
@@ -159,8 +159,8 @@ export async function createGmailDraft(to: string, subject: string, body: string
 export async function sendWhatsApp(to: string, body: string, connection?: Connection) {
   const business = connection?.identity?.businessName || connection?.identity?.displayName || "WhatsApp Business";
   if (!config.outbound.live) return { mode: "preview", channel: "whatsapp", to, business };
-  const token = connection?.accessToken || config.whatsapp.token;
-  const phoneNumberId = connection?.identity?.phoneNumberId || connection?.label || config.whatsapp.phoneNumberId;
+  const token = connection?.accessToken || "";
+  const phoneNumberId = connection?.identity?.phoneNumberId || connection?.label || "";
   if (!token || !phoneNumberId || !to) return { mode: "demo", channel: "whatsapp", to };
   return checked(`https://graph.facebook.com/v23.0/${phoneNumberId}/messages`, {
     method: "POST",
@@ -174,8 +174,8 @@ export async function updateWebsite(change: Record<string, unknown>, connection?
   const domain = connection?.identity?.domain || "";
   const attributedChange = { ...change, actor, domain };
   if (!config.outbound.live) return { mode: "preview", channel: "website", change: attributedChange, actor, domain };
-  const url = connection?.identity?.webhookUrl || connection?.label || config.website.url;
-  const secret = connection?.accessToken || config.website.secret;
+  const url = connection?.identity?.webhookUrl || connection?.label || "";
+  const secret = connection?.accessToken || "";
   if (!url || !secret) return { mode: "demo", channel: "website", change: attributedChange, actor, domain };
   const body = JSON.stringify(attributedChange);
   const signature = createHmac("sha256", secret).update(body).digest("hex");

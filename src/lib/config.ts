@@ -36,23 +36,23 @@ export const config = {
     model: process.env.OPENAI_MODEL || "gpt-4.1-mini"
   },
   google: {
-    token: process.env.GOOGLE_ACCESS_TOKEN || "",
+    token: "",
     clientId: process.env.GOOGLE_CLIENT_ID || "",
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     redirectUri: process.env.GOOGLE_REDIRECT_URI || "",
-    refreshToken: process.env.GOOGLE_REFRESH_TOKEN || "",
-    sheetId: process.env.GOOGLE_SHEET_ID || "",
-    driveFolderId: process.env.GOOGLE_DRIVE_FOLDER_ID || "",
-    sender: process.env.GMAIL_SENDER || ""
+    refreshToken: "",
+    sheetId: "",
+    driveFolderId: "",
+    sender: ""
   },
   whatsapp: {
-    token: process.env.WHATSAPP_ACCESS_TOKEN || "",
-    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || "",
-    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || ""
+    token: "",
+    phoneNumberId: "",
+    verifyToken: ""
   },
   website: {
-    url: process.env.WEBSITE_WEBHOOK_URL || "",
-    secret: process.env.WEBSITE_WEBHOOK_SECRET || ""
+    url: "",
+    secret: ""
   },
   outbound: {
     live: yes(process.env.OUTBOUND_SENDS_LIVE)
@@ -74,8 +74,7 @@ export function useSupabaseAuth() {
 }
 
 export function integrationStatus() {
-  const googleCanRefresh = Boolean(config.google.clientId && config.google.clientSecret && config.google.refreshToken);
-  const googleCanAuthorize = Boolean(config.google.token || googleCanRefresh);
+  const googleOAuthReady = Boolean(config.google.clientId && config.google.clientSecret);
   return {
     store: useDynamoDb() ? "dynamodb" : "demo",
     auth: useSupabaseAuth() ? "supabase" : "demo",
@@ -84,15 +83,16 @@ export function integrationStatus() {
     aiProvider: config.ai.provider,
     gemini: Boolean(config.ai.geminiApiKey && config.ai.geminiModel),
     openai: Boolean(config.openai.apiKey && config.openai.model),
-    googleRefresh: googleCanRefresh,
-    sheets: Boolean(googleCanAuthorize && config.google.sheetId),
-    drive: Boolean(googleCanAuthorize && config.google.driveFolderId),
-    gmailReady: Boolean(googleCanAuthorize && config.google.sender),
-    gmail: Boolean(config.outbound.live && googleCanAuthorize && config.google.sender),
-    whatsappReady: Boolean(config.whatsapp.token && config.whatsapp.phoneNumberId),
-    whatsapp: Boolean(config.outbound.live && config.whatsapp.token && config.whatsapp.phoneNumberId),
-    websiteReady: Boolean(config.website.url && config.website.secret),
-    website: Boolean(config.outbound.live && config.website.url && config.website.secret),
+    googleOAuthReady,
+    googleRefresh: false,
+    sheets: false,
+    drive: false,
+    gmailReady: googleOAuthReady,
+    gmail: false,
+    whatsappReady: false,
+    whatsapp: false,
+    websiteReady: false,
+    website: false,
     outboundLive: config.outbound.live
   };
 }

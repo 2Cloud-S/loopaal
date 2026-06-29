@@ -4,7 +4,7 @@ import { dynamoRequest, marshal, unmarshal } from "./dynamodb.ts";
 import { keysFor, type StoredEntity } from "./dynamo-keys.ts";
 import { audit, makeId, nowIso } from "./ids.ts";
 import { config, useDynamoDb } from "./config.ts";
-import type { AppState, AuditEvent, Campaign, MemoryItem, Prospect, Approval, WorkerJob, Connection, WorkspaceIdentity } from "../types.ts";
+import type { AppState, AuditEvent, Campaign, MemoryItem, Prospect, Approval, WorkerJob, Connection, WorkspaceIdentity, OnboardingState, OnboardingStatus } from "../types.ts";
 
 const demoFile = join(process.cwd(), "data", "loopaal.json");
 const emptyState = (): AppState => ({ campaigns: [], prospects: [], memories: [], approvals: [], workerJobs: [], audit: [], connections: [] });
@@ -46,7 +46,8 @@ function toState(entities: StoredEntity[]): AppState {
     workerJobs: entities.filter((x): x is StoredEntity & WorkerJob => x.entityType === "workerJob").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     audit: entities.filter((x): x is StoredEntity & AuditEvent => x.entityType === "audit").sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
     connections: entities.filter((x): x is StoredEntity & Connection => x.entityType === "connection").sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
-    identity: entities.find((x): x is StoredEntity & WorkspaceIdentity => x.entityType === "workspaceIdentity")
+    identity: entities.find((x): x is StoredEntity & WorkspaceIdentity => x.entityType === "workspaceIdentity"),
+    onboarding: entities.find((x): x is StoredEntity & OnboardingState => x.entityType === "onboarding")
   };
 }
 
@@ -64,7 +65,8 @@ function scopedState(state: AppState, workspaceId?: string): AppState {
     approvals: state.approvals.filter(x => x.workspaceId === workspaceId || prospectIds.has(String(x.payload.prospectId || ""))),
     audit: state.audit.filter(x => x.workspaceId === workspaceId || campaigns.some(campaign => x.detail.includes(campaign.id) || x.detail.includes(campaign.name))),
     connections: state.connections.filter(x => x.workspaceId === workspaceId),
-    identity: state.identity?.workspaceId === workspaceId ? state.identity : undefined
+    identity: state.identity?.workspaceId === workspaceId ? state.identity : undefined,
+    onboarding: state.onboarding?.workspaceId === workspaceId ? state.onboarding : undefined
   };
 }
 
@@ -92,7 +94,8 @@ export async function replaceState(mutator: (state: AppState) => void | Promise<
         ...state.workerJobs.map(x => ({ entityType: "workerJob" as const, ...x })),
         ...state.audit.map(x => ({ entityType: "audit" as const, ...x })),
         ...state.connections.map(x => ({ entityType: "connection" as const, ...x })),
-        ...(state.identity ? [{ entityType: "workspaceIdentity" as const, ...state.identity }] : [])
+        ...(state.identity ? [{ entityType: "workspaceIdentity" as const, ...state.identity }] : []),
+        ...(state.onboarding ? [{ entityType: "onboarding" as const, ...state.onboarding }] : [])
       ];
       await Promise.all(entities.map(putEntity));
     } else {
@@ -102,6 +105,22 @@ export async function replaceState(mutator: (state: AppState) => void | Promise<
   });
   await queue;
   return result;
+}
+
+export async function saveOnboardingState(workspaceId: string, patch: Partial<Pick<OnboardingState, "completedStepIds" | "status">>) {
+  const now = nowIso();
+  return replaceState(state => {
+    const current = state.onboarding;
+    const nextStatus: OnboardingStatus = patch.status || current?.status || "active";
+    const completedStepIds = Array.from(new Set([...(current?.completedStepIds || []), ...(patch.completedStepIds || [])]));
+    state.onboarding = {
+      workspaceId,
+      status: nextStatus,
+      completedStepIds,
+      createdAt: current?.createdAt || now,
+      updatedAt: now
+    };
+  }, workspaceId);
 }
 
 export async function appendAudit(action: string, detail: string, actor = "loopaal") {
@@ -335,6 +354,20 @@ export async function saveConnection(connection: Connection) {
     state.audit.unshift({ ...audit("connection.saved", `${connection.provider}:${connection.label}`, "operator"), workspaceId: connection.workspaceId });
   }, connection.workspaceId);
   return connection;
+}
+
+export async function disconnectConnection(workspaceId: string, provider: Connection["provider"]) {
+  return replaceState(state => {
+    const connection = state.connections.find(x => x.workspaceId === workspaceId && x.provider === provider && x.status === "connected");
+    if (!connection) throw new Error(`${provider} connection not found`);
+    connection.status = "needs_setup";
+    connection.accessToken = undefined;
+    connection.refreshToken = undefined;
+    connection.expiresAt = undefined;
+    connection.identity = { ...(connection.identity || {}), tokenRef: "" };
+    connection.updatedAt = nowIso();
+    state.audit.unshift({ ...audit("connection.disconnected", `${provider}:${connection.label}`, "operator"), workspaceId });
+  }, workspaceId);
 }
 
 export function newWorkerJob(campaignId: string, workerId: string, status: WorkerJob["status"], summary: string, artifacts: Record<string, unknown> = {}, error?: string): WorkerJob {

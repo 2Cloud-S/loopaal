@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { makeId, nowIso } from "../../../../src/lib/ids.ts";
-import { saveConnection } from "../../../../src/lib/repository.ts";
+import { loadState, saveConnection } from "../../../../src/lib/repository.ts";
 import { workspaceFromRequest } from "../../../../src/lib/workspace.ts";
 import type { Connection } from "../../../../src/types.ts";
 
@@ -12,7 +12,12 @@ export async function POST(request: Request) {
     const data = await request.json();
     const provider = data.provider === "website" ? "website" : data.provider === "whatsapp" ? "whatsapp" : undefined;
     if (!provider) return NextResponse.json({ error: "Unsupported provider" }, { status: 400 });
+    const existing = (await loadState(workspaceId)).connections.find(connection => connection.provider === provider && connection.status === "connected");
     const now = nowIso();
+    const secret = provider === "whatsapp"
+      ? String(data.accessToken || existing?.accessToken || "")
+      : String(data.webhookSecret || existing?.accessToken || "");
+    if (!secret) return NextResponse.json({ error: provider === "whatsapp" ? "Access token is required" : "Webhook secret is required" }, { status: 400 });
     const identity = provider === "whatsapp" ? {
       businessName: String(data.businessName || ""),
       displayName: String(data.businessName || "WhatsApp Business"),
@@ -27,16 +32,16 @@ export async function POST(request: Request) {
       destinationLabel: String(data.domain || data.webhookUrl || "Website webhook")
     };
     const connection: Connection = {
-      id: makeId("con"),
+      id: existing?.id || makeId("con"),
       workspaceId,
       provider,
       status: "connected",
       label: provider === "whatsapp" ? String(data.phoneNumberId || "WhatsApp Business") : String(data.webhookUrl || "Website webhook"),
       scopes: provider === "whatsapp" ? ["whatsapp.messages"] : ["website.webhook"],
       identity,
-      accessToken: provider === "whatsapp" ? String(data.accessToken || "") : String(data.webhookSecret || ""),
+      accessToken: secret,
       refreshToken: provider === "whatsapp" ? String(data.verifyToken || "") : undefined,
-      createdAt: now,
+      createdAt: existing?.createdAt || now,
       updatedAt: now
     };
     return NextResponse.json(await saveConnection(connection), { status: 201 });

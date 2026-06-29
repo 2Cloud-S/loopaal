@@ -7,9 +7,11 @@ import { loadState, newWorkerJob, remember, patchApproval, saveApproval, saveCam
 import { askAI, createGmailDraft, sendGmail, sendWhatsApp, updateWebsite } from "./adapters.ts";
 import { config } from "./config.ts";
 import { exportMemoryFactory } from "./memory-factory.ts";
+import { assertAiAvailableForNewCampaign } from "./ai-security.ts";
 import type { Approval, Campaign, MemoryItem, Prospect, WorkerJob, WorkspaceIdentity } from "../types.ts";
 
 export async function createCampaign(name: string, raw: Record<string, unknown>, workspaceId?: string) {
+  assertAiAvailableForNewCampaign(await loadState(workspaceId));
   const campaign: Campaign = { id: makeId("cmp"), workspaceId, name, status: "draft", criteria: normalizeCriteria(raw), createdAt: nowIso() };
   return saveCampaign(campaign, workspaceId);
 }

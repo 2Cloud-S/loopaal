@@ -59,7 +59,7 @@ GOOGLE_CLIENT_SECRET=
 GOOGLE_REDIRECT_URI=http://localhost:3000/api/connections/google/callback
 ```
 
-Consumer Google refresh tokens are saved as workspace connections after OAuth. `GOOGLE_REFRESH_TOKEN` is optional legacy/demo fallback only.
+Consumer Google refresh tokens are saved as workspace connections after OAuth. Global Google access or refresh tokens are not used for customer Gmail/Drive behavior.
 
 ## Test behavior
 

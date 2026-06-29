@@ -5,7 +5,7 @@
 - Frontend and API: Next.js App Router on Vercel.
 - Language: TypeScript.
 - Database: AWS DynamoDB single-table design.
-- AI provider: configurable provider adapter with Gemini, OpenAI, and deterministic demo fallback.
+- AI provider: Loopaal-owned trial AI for 5 campaigns per workspace, then customer-owned OAuth/secure-vault AI connection.
 - Outbound mode: external sends run as previews unless `OUTBOUND_SENDS_LIVE=true`.
 - Workspace isolation: browser workspaces send `x-loopaal-workspace`; API state is scoped to that workspace.
 - Worker ecosystem: separate local package intended to become the `workers` GitHub repo/submodule.
@@ -20,6 +20,9 @@
 - `POST /api/approvals/[id]/reject` — reject an action.
 - `POST /api/memory` — save durable context.
 - `POST /api/website-changes` — queue a website update approval.
+- `POST /api/connections/website/test` — send a signed test payload to a customer-owned website webhook.
+- `POST /api/connections/ai/start` — begin a secure customer-owned AI OAuth/vault connection flow; raw API keys are rejected.
+- `POST /api/connections/ai/disconnect` — revoke workspace AI metadata and secret references.
 - `POST /api/webhooks/gmail` and `/api/webhooks/whatsapp` — ingest replies.
 - `GET /setup` — customer-facing workspace setup and integration readiness.
 - `GET /api/connections/google/start` and `/callback` — Google OAuth for workspace-owned Gmail/Drive access.
@@ -32,6 +35,8 @@
 - Failed workers must create visible audit entries instead of failing the whole run.
 - Draft generation must fall back to deterministic copy if an AI provider is unavailable.
 - Platform AI/database services may be shared by the deployment, but outbound channels must be workspace-owned before live execution.
+- Platform AI is limited to the workspace trial. Customer AI secrets must be OAuth tokens or secure-vault references, never raw keys stored in DynamoDB or browser storage.
+- Website integrations must stay provider-agnostic: Loopaal stores an HTTPS webhook URL and shared signing secret, not a Cloudflare-specific connection.
 
 ## Safety requirements
 

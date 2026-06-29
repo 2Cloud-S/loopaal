@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-06-29",
+    "macrostructure": "Motion convergence landing",
+    "theme": "Loopaal Console Minimal",
+    "enrichment": "inline SVG path motion",
+    "brief": "replace reference video and generic infographics with custom Loopaal convergence motion",
+    "nav": "minimal product nav",
+    "footer": "quiet product footer"
+  },
+  {
+    "date": "2026-06-29",
+    "macrostructure": "Product-flow landing",
+    "theme": "Loopaal Console Minimal",
+    "enrichment": "CSS motion plus product demo video",
+    "brief": "homepage motion, services menu, product presentation, and workflow infographic",
+    "nav": "minimal product nav",
+    "footer": "quiet product footer"
+  },
+  {
     "date": "2026-06-26",
     "macrostructure": "Manifesto-to-console tour",
     "theme": "Loopaal Console Minimal",

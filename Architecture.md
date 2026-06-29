@@ -18,6 +18,7 @@ flowchart LR
   API --> Gmail["Gmail adapter"]
   API --> WhatsApp["WhatsApp Cloud API adapter"]
   API --> Website["Signed website webhook"]
+  Website --> AnySite["Cloudflare / Vercel / CMS / custom API"]
   API --> OpenAI["OpenAI Responses API"]
 ```
 
@@ -27,6 +28,7 @@ flowchart LR
 - DynamoDB stores operational state, worker jobs, prospects, approvals, memory, scheduled actions, inbound replies, and audit events.
 - Worker code is versioned separately under the future `workers` repo and imported by the main app.
 - Gmail, WhatsApp, Sheets/Drive, and website adapters are pluggable and stay in demo mode without credentials.
+- Website publishing is provider-agnostic. Cloudflare Workers are the demo path, but customers can connect any HTTPS endpoint that verifies Loopaal's HMAC signature.
 
 ## Hybrid storage model
 

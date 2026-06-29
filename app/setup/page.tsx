@@ -1,5 +1,8 @@
 import { integrationStatus } from "../../src/lib/config.ts";
-import { requirePageUser } from "../../src/lib/auth.ts";
+import { aiTrialStatus } from "../../src/lib/ai-security.ts";
+import { requirePageUser, workspaceIdForUser } from "../../src/lib/auth.ts";
+import { loadState } from "../../src/lib/repository.ts";
+import { OnboardingGuide } from "../onboarding-guide.tsx";
 import { SetupClient } from "./setup-client.tsx";
 
 export const dynamic = "force-dynamic";
@@ -9,10 +12,16 @@ function StatusPill({ ready, label }: { ready: boolean; label: string }) {
 }
 
 export default async function SetupPage() {
-  await requirePageUser();
+  const user = await requirePageUser();
+  const workspaceId = user ? workspaceIdForUser(user) : undefined;
+  const state = workspaceId ? await loadState(workspaceId) : undefined;
   const status = integrationStatus();
+  const google = state?.connections.find(connection => connection.provider === "google" && connection.status === "connected");
+  const whatsapp = state?.connections.find(connection => connection.provider === "whatsapp" && connection.status === "connected");
+  const website = state?.connections.find(connection => connection.provider === "website" && connection.status === "connected");
+  const ai = state ? aiTrialStatus(state) : undefined;
   const platformReady = Boolean(status.dynamodb && status.gemini);
-  const customerChannelsReady = Boolean(status.gmail || status.whatsapp || status.website);
+  const customerChannelsReady = Boolean(google || whatsapp || website || status.gmail || status.whatsapp || status.website);
 
   return (
     <>
@@ -30,32 +39,41 @@ export default async function SetupPage() {
           <p className="kicker">workspace setup</p>
           <h1>Start safe. Connect channels when ready.</h1>
           <p>
-            Loopaal can run campaigns, workers, memory, and drafts with platform services first. Customer-owned channels such as Gmail, WhatsApp, and website updates stay disabled until that workspace connects them.
+            Loopaal can run campaigns, workers, memory, and drafts with platform services first.
+            Customer-owned channels stay disabled until the workspace connects them.
           </p>
+          <div className="setup-hero-strip" aria-label="Setup sequence">
+            <span>identity</span>
+            <span>google</span>
+            <span>memory</span>
+            <span>channels</span>
+            <span>approval</span>
+          </div>
         </section>
 
         <section className="setup-grid" aria-label="Workspace setup steps">
-          <article className="setup-card">
+          <article className="setup-card setup-step-card">
             <span>01</span>
             <h2>Run the core workflow</h2>
-            <p>Create a campaign, launch the co-workers, save memory, and generate outreach drafts. This does not require a customer Gmail or WhatsApp account.</p>
+            <p>Create a campaign, launch the co-workers, save memory, and generate outreach drafts before connecting live channels.</p>
             <div className="setup-pills">
               <StatusPill ready={platformReady} label="AI + workspace data" />
+              <StatusPill ready={Boolean(ai && !ai.requiresCustomerAi)} label={`Loopaal AI trial ${ai?.used || 0}/${ai?.limit || 5}`} />
             </div>
           </article>
 
-          <article className="setup-card">
+          <article className="setup-card setup-step-card">
             <span>02</span>
             <h2>Connect owned channels</h2>
-            <p>Use a dedicated business sender, not a personal inbox. Gmail uses compose OAuth so Loopaal can create drafts for review. WhatsApp and website updates should use business-owned API credentials.</p>
+            <p>Connect a dedicated business sender and any business-owned APIs the workspace will use for approved actions.</p>
             <div className="setup-pills">
-              <StatusPill ready={Boolean(status.gmailReady)} label="Gmail configured" />
-              <StatusPill ready={Boolean(status.whatsappReady)} label="WhatsApp configured" />
-              <StatusPill ready={Boolean(status.websiteReady)} label="Website webhook configured" />
+              <StatusPill ready={Boolean(google || status.gmailReady)} label="Gmail configured" />
+              <StatusPill ready={Boolean(whatsapp || status.whatsappReady)} label="WhatsApp configured" />
+              <StatusPill ready={Boolean(website || status.websiteReady)} label="Website webhook configured" />
             </div>
           </article>
 
-          <article className="setup-card">
+          <article className="setup-card setup-step-card">
             <span>03</span>
             <h2>Turn on live actions</h2>
             <p>Approvals can be reviewed any time. Real external sends only execute when live outbound mode is enabled for the workspace.</p>
@@ -67,11 +85,12 @@ export default async function SetupPage() {
         </section>
 
         <SetupClient />
+        <OnboardingGuide surface="setup" />
 
         <section className="setup-note">
           <div>
             <h2>What a non-technical customer does</h2>
-            <p>They start with the console, run a campaign in preview mode, review the draft quality, then connect their own business channels before real sends. No one uses the founder’s personal credentials.</p>
+            <p>They start with the console, run a campaign in preview mode, review draft quality, then connect their own business channels before real sends.</p>
           </div>
           <a className="btn primary" href="/dashboard">Continue to console</a>
         </section>

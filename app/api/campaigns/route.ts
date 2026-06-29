@@ -9,6 +9,7 @@ export async function POST(request: Request) {
     const data = await request.json();
     return NextResponse.json(await createCampaign(String(data.name || "Untitled campaign"), data, await workspaceFromRequest(request)), { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Authentication required" }, { status: 401 });
+    const status = error instanceof Error && "status" in error && typeof error.status === "number" ? error.status : 401;
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Authentication required" }, { status });
   }
 }

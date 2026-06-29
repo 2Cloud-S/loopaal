@@ -5,6 +5,8 @@ import { canExecute, outboundRisk } from "../src/lib/policies.ts";
 import { recall } from "../src/lib/memory.ts";
 import { keysFor } from "../src/lib/dynamo-keys.ts";
 import { memoryFactoryStatus, memoryToSheetRow, parseMemorySheetRows, parseProspectSheetRows, prospectToSheetRow } from "../src/lib/memory-factory.ts";
+import { aiTrialStatus, assertAiAvailableForNewCampaign, signedAiState, verifySignedAiState } from "../src/lib/ai-security.ts";
+import { deriveOnboardingStepIds, onboardingView } from "../src/lib/onboarding.ts";
 import type { AppState, Connection } from "../src/types.ts";
 
 test("volatile campaign criteria normalize from text", () => {
@@ -36,6 +38,13 @@ test("DynamoDB keys keep campaign records queryable", () => {
   assert.equal(keys.pk, "CAMPAIGN#cmp_1");
   assert.equal(keys.sk, "PROSPECT#pro_1");
   assert.equal(keys.gsi1pk, "CAMPAIGN#cmp_1");
+});
+
+test("DynamoDB keys isolate onboarding by workspace", () => {
+  const keys = keysFor({ entityType: "onboarding", workspaceId: "ws_1", status: "active", completedStepIds: ["intro"], createdAt: "2026-01-01", updatedAt: "2026-01-01" });
+  assert.equal(keys.pk, "WORKSPACE#ws_1");
+  assert.equal(keys.sk, "ONBOARDING");
+  assert.equal(keys.gsi1pk, "WORKSPACE#ws_1");
 });
 
 test("Memory Factory status requires folder and spreadsheet metadata", () => {
@@ -74,4 +83,48 @@ test("Memory Factory parses only editable sheet fields", () => {
     ["pro_1", "cmp_1", "North", "https://north.example", "ignored", "ignored", "A", "Founder", "a@b.com", "+1 (555)", "0.1", "edited note", "ignored"]
   ]);
   assert.deepEqual(prospects[0], { kind: "prospect", id: "pro_1", website: "https://north.example", contactName: "A", contactRole: "Founder", email: "a@b.com", phone: "+1555", notes: "edited note" });
+});
+
+test("Loopaal AI trial allows five campaigns before customer AI is required", () => {
+  const campaigns = Array.from({ length: 5 }, (_, index) => ({
+    id: `cmp_${index}`,
+    workspaceId: "ws_1",
+    name: `Campaign ${index}`,
+    status: "complete" as const,
+    criteria: { businessNames: [], industries: [], countries: [], decisionMakers: [], offer: "", notes: "" },
+    createdAt: "2026-01-01"
+  }));
+  const state: AppState = { campaigns, prospects: [], approvals: [], workerJobs: [], audit: [], connections: [], memories: [] };
+  assert.equal(aiTrialStatus(state).requiresCustomerAi, true);
+  assert.throws(() => assertAiAvailableForNewCampaign(state), /trial AI limit reached/i);
+  const aiConnection: Connection = { id: "con_ai", workspaceId: "ws_1", provider: "ai", status: "connected", scopes: ["ai.oauth"], label: "Gemini AI", identity: { aiProvider: "gemini", tokenRef: "secret/ref" }, createdAt: "2026-01-01", updatedAt: "2026-01-01" };
+  assert.doesNotThrow(() => assertAiAvailableForNewCampaign({ ...state, connections: [aiConnection] }));
+});
+
+test("AI OAuth state is HMAC signed and tamper resistant", () => {
+  const state = signedAiState("ws_1", "gemini");
+  assert.equal(verifySignedAiState(state).workspaceId, "ws_1");
+  assert.throws(() => verifySignedAiState(`${state.slice(0, -1)}x`), /signature|payload|state/i);
+});
+
+test("onboarding view merges saved progress with workspace-derived steps", () => {
+  const google: Connection = { id: "con_google", workspaceId: "ws_1", provider: "google", status: "connected", scopes: [], label: "owner@example.com", createdAt: "2026-01-01", updatedAt: "2026-01-01" };
+  const state: AppState = {
+    campaigns: [],
+    prospects: [],
+    approvals: [],
+    workerJobs: [],
+    audit: [],
+    connections: [google],
+    memories: [],
+    identity: { workspaceId: "ws_1", businessName: "North Studio", createdAt: "2026-01-01", updatedAt: "2026-01-01" },
+    onboarding: { workspaceId: "ws_1", status: "active", completedStepIds: ["intro"], createdAt: "2026-01-01", updatedAt: "2026-01-01" }
+  };
+  assert.deepEqual(deriveOnboardingStepIds(state).sort(), ["google", "identity"].sort());
+  const view = onboardingView(state, "ws_1");
+  assert.equal(view.status, "active");
+  assert.equal(view.completedStepIds.includes("intro"), true);
+  assert.equal(view.completedStepIds.includes("identity"), true);
+  assert.equal(view.completedStepIds.includes("google"), true);
+  assert.equal(view.totalSteps, 8);
 });

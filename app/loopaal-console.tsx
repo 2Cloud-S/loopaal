@@ -173,7 +173,7 @@ export function LoopaalConsole() {
             <div>
               <p className="kicker">workspace readiness</p>
               <h2>{identityReady ? `Client-facing as ${state.identity?.businessName}.` : "Add Business Identity before external drafts."}</h2>
-              <p>{identityReady ? `${state.integrations?.outboundLive ? "Live outbound is enabled" : "Preview mode is enabled"}, and drafts use this workspace identity rather than Loopaal as the sender.` : "Campaigns and internal drafts can still run, but Gmail drafts, WhatsApp messages, and website updates need the consumer's business identity first."}</p>
+              <p>{identityReady ? `${state.integrations?.outboundLive ? "Live outbound is enabled" : "Preview mode is enabled"}, and drafts use this workspace identity.` : "Campaigns and internal drafts can still run, but Gmail drafts, WhatsApp messages, and website updates need the consumer's business identity first."}</p>
             </div>
             <a className="btn" href="/setup">Setup workspace</a>
           </section>
