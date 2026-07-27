@@ -1,4 +1,4 @@
-# Architecture — loopaal H0
+# Architecture - Loopaal
 
 ```mermaid
 flowchart LR
@@ -19,7 +19,7 @@ flowchart LR
   API --> WhatsApp["WhatsApp Cloud API adapter"]
   API --> Website["Signed website webhook"]
   Website --> AnySite["Cloudflare / Vercel / CMS / custom API"]
-  API --> OpenAI["OpenAI Responses API"]
+  API --> AIProvider["AI provider adapter"]
 ```
 
 ## Deployment shape
@@ -27,8 +27,8 @@ flowchart LR
 - Vercel hosts the Next.js frontend and API routes.
 - DynamoDB stores operational state, worker jobs, prospects, approvals, memory, scheduled actions, inbound replies, and audit events.
 - Worker code is versioned separately under the future `workers` repo and imported by the main app.
-- Gmail, WhatsApp, Sheets/Drive, and website adapters are pluggable and stay in demo mode without credentials.
-- Website publishing is provider-agnostic. Cloudflare Workers are the demo path, but customers can connect any HTTPS endpoint that verifies Loopaal's HMAC signature.
+- Gmail, WhatsApp, Sheets/Drive, and website adapters are pluggable and remain disabled for external actions until the workspace connects customer-owned credentials.
+- Website publishing is provider-agnostic. Cloudflare Workers are supported, and customers can connect any HTTPS endpoint that verifies Loopaal's HMAC signature.
 
 ## Hybrid storage model
 

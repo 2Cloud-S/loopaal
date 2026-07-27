@@ -52,7 +52,7 @@ components:
 
 ## Overview
 
-Loopaal should feel like a serious operations console, not a hackathon splash screen. The visual language is sparse, text-led, and workflow-native: large confident type, small mono labels, sharp rules, and console panels that show the product flow directly.
+Loopaal should feel like a serious operations console, not a temporary splash screen. The visual language is sparse, text-led, and workflow-native: large confident type, small mono labels, sharp rules, and console panels that show the product flow directly.
 
 ## Colors
 
@@ -73,7 +73,7 @@ Buttons are flat and bordered. Console panels are real product previews, not fak
 ## Do's and Don'ts
 
 - Do show the operator → co-workers → memory → approval loop.
-- Do keep provider/hackathon details out of primary product UI.
+- Do keep provider and implementation details out of primary product UI unless they help customers make setup decisions.
 - Do keep sends approval-gated and privacy language visible.
 - Do not claim real customer numbers, conversion lifts, or integrations that are not connected.
 - Do not copy another site’s pixels or content; adapt only structural inspiration.

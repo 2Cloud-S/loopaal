@@ -12,7 +12,7 @@ function aiProvider() {
 
 export const config = {
   store: process.env.LOOPAAL_STORE || "demo",
-  tableName: process.env.LOOPAAL_TABLE_NAME || "loopaal-h0",
+  tableName: process.env.LOOPAAL_TABLE_NAME || "loopaal",
   appUrl: process.env.NEXT_PUBLIC_APP_URL || "",
   supabase: {
     url: process.env.NEXT_PUBLIC_SUPABASE_URL || "",

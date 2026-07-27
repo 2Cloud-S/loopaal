@@ -1,4 +1,4 @@
-# VERCEL — Deployment Guide
+# VERCEL - Deployment Guide
 
 ## Project settings
 
@@ -31,16 +31,15 @@ Set the variables from `.env.example`, especially:
 - `OPENAI_API_KEY`
 - `OPENAI_MODEL`
 
-## Submission checklist
+## Deployment verification checklist
 
 - Published Vercel project link.
-- Vercel Team ID.
+- Vercel project settings and environment variables are configured.
 - Architecture diagram from `Architecture.md`.
-- AWS DynamoDB screenshot from `AWS.md`.
-- Demo video under three minutes.
+- AWS DynamoDB connectivity verified from `AWS.md`.
 - Google Cloud OAuth redirect URI exactly matches the production callback URL.
 - Supabase Auth project URL/anon key are configured in Vercel.
 
-## Judge-friendly note
+## Safe preview note
 
-If private credentials are unavailable during judging, set `LOOPAAL_STORE=demo` and `NEXT_PUBLIC_LOOPAAL_DEMO=true`. The app will still demonstrate the full workflow without transmitting external messages.
+Keep `OUTBOUND_SENDS_LIVE=false` unless you are deliberately enabling live sends for a workspace with customer-owned channels. Preview mode is controlled by approval/live-action policy, not by a public sample-data flag.

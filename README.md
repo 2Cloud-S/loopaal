@@ -1,6 +1,6 @@
-# loopaal
+# Loopaal
 
-loopaal is a supervised AI revenue-ops automation platform for the H0 Vercel + AWS Databases hackathon. It targets **Track 2: Monetizable B2B App** and demonstrates parallel co-workers, DynamoDB-backed memory, approval-gated outreach, and a Vercel-ready Next.js dashboard.
+Loopaal is a supervised AI revenue-ops automation platform for businesses that want agentic outreach without losing control of customer-owned channels. It uses parallel co-workers, DynamoDB-backed memory, approval-gated actions, and a Vercel-ready Next.js dashboard.
 
 ## Run locally
 
@@ -14,15 +14,15 @@ npm run dev
 
 Open `http://localhost:3000`. The product starts with workspace setup, then moves users into `/dashboard`.
 
-With `LOOPAAL_STORE=demo`, loopaal uses local demo persistence. With `LOOPAAL_STORE=dynamodb` and AWS credentials, it writes to DynamoDB. Platform AI keys are used only for Loopaal's limited trial AI; customer-owned long-term AI must use OAuth or a secure server-side vault, never raw API keys in the app database.
+For production, set `LOOPAAL_STORE=dynamodb` with AWS credentials so Loopaal writes to DynamoDB. Local development can use the file-backed fallback when DynamoDB is not configured. Platform AI keys are used only for Loopaal's limited trial AI; customer-owned long-term AI must use OAuth or a secure server-side vault, never raw API keys in the app database.
 
-Set `NEXT_PUBLIC_SUPABASE_URL` and either `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable Supabase Auth. Without those variables, Loopaal keeps a local demo workspace fallback for development.
+Set `NEXT_PUBLIC_SUPABASE_URL` and either `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` or `NEXT_PUBLIC_SUPABASE_ANON_KEY` to enable Supabase Auth. Without those variables, Loopaal keeps a local development workspace fallback.
 
 External sends are safe by default. Gmail, WhatsApp, and website updates run in preview mode unless `OUTBOUND_SENDS_LIVE=true` is set for a workspace with owned channel credentials.
 
-With Supabase enabled, each signed-in user gets an isolated workspace. API routes resolve the workspace from the server-verified Supabase session. Local-storage workspace IDs are used only in demo auth mode.
+With Supabase enabled, each signed-in user gets an isolated workspace. API routes resolve the workspace from the server-verified Supabase session. Local-storage workspace IDs are used only by the local development auth fallback.
 
-## Hackathon docs
+## Project docs
 
 - [PRD.md](./PRD.md)
 - [TRD.md](./TRD.md)
@@ -42,7 +42,7 @@ DynamoDB is Loopaal’s canonical operational database. Google Drive/Sheets is a
 
 The core workflow uses DynamoDB for campaigns, prospects, approvals, audit, and normalized memory. Advanced memory management unlocks only after a user connects Google Drive/Sheets from `/setup`; until then, campaigns still work, but customer-editable memory export/import remains locked.
 
-## Core demo flow
+## Core workflow
 
 1. Complete workspace setup.
 2. Create a campaign from volatile targeting criteria.
@@ -60,7 +60,7 @@ The core workflow uses DynamoDB for campaigns, prospects, approvals, audit, and 
 - Real external actions require `OUTBOUND_SENDS_LIVE=true`; otherwise approved actions remain non-destructive previews.
 - Gmail should use a dedicated business mailbox and the `gmail.compose` scope, not a personal main inbox.
 - Consumers connect Google from `/setup`; OAuth tokens are saved against their workspace, not treated as global sender identity.
-- Website updates use a signed HTTPS webhook contract. Cloudflare Workers are supported for the demo, but customers can connect any platform that can verify `X-Loopaal-Signature`.
-- Demo mode never sends real external messages.
+- Website updates use a signed HTTPS webhook contract. Cloudflare Workers are supported, and customers can connect any platform that can verify `X-Loopaal-Signature`.
+- Preview mode never sends real external messages.
 - Every meaningful transition is written to the audit log.
 - Public-web research must respect source terms, privacy rules, opt-outs, and applicable anti-spam laws.

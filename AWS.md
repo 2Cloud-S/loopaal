@@ -4,7 +4,7 @@
 
 ```bash
 LOOPAAL_STORE=dynamodb
-LOOPAAL_TABLE_NAME=loopaal-h0
+LOOPAAL_TABLE_NAME=loopaal
 AWS_REGION=us-east-1
 AWS_ACCESS_KEY_ID=...
 AWS_SECRET_ACCESS_KEY=...
@@ -13,7 +13,7 @@ AWS_SESSION_TOKEN=... # optional
 
 ## Table
 
-Table name: `loopaal-h0`
+Table name: `loopaal`
 
 Primary key:
 
@@ -29,7 +29,7 @@ Global secondary indexes:
 
 ```bash
 aws dynamodb create-table \
-  --table-name loopaal-h0 \
+  --table-name loopaal \
   --attribute-definitions \
     AttributeName=pk,AttributeType=S \
     AttributeName=sk,AttributeType=S \
@@ -44,7 +44,7 @@ aws dynamodb create-table \
   --billing-mode PAY_PER_REQUEST
 ```
 
-## Devpost proof screenshot
+## Database verification screenshot
 
 Capture one screenshot that clearly shows:
 

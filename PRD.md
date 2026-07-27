@@ -13,10 +13,6 @@ The product is workspace-first: customers can run the core campaign workflow imm
 - Solo operators who need automation but still want control over sends and website changes.
 - Non-technical operators who need guided setup rather than cloud-console or `.env` work.
 
-## Hackathon track
-
-Track 2: Monetizable B2B App.
-
 ## Product story
 
 1. Operator opens workspace setup and sees which platform services and owned channels are ready.
@@ -34,5 +30,5 @@ Track 2: Monetizable B2B App.
 - Sensitive sends and website changes require explicit approval.
 - Customer-owned channels must be connected before live outbound actions.
 - Platform credentials must not be treated as a consumer's sender identity.
-- The demo can be explained in under three minutes.
-- Documentation clearly maps the implementation to H0 requirements.
+- The product workflow can be explained clearly in a short customer walkthrough.
+- Documentation clearly maps product behavior, architecture, safety, and operations.

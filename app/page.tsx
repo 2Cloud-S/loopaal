@@ -1,3 +1,5 @@
+import { currentPageUser } from "../src/lib/auth.ts";
+
 const workerStreams = [
   ["research", "find verified targets"],
   ["analysis", "score fit and risk"],
@@ -90,7 +92,12 @@ function ConvergenceGraphic() {
   );
 }
 
-export default function Page() {
+export const dynamic = "force-dynamic";
+
+export default async function Page() {
+  const user = await currentPageUser();
+  const signedIn = Boolean(user);
+
   return (
     <>
       <nav className="nav landing-nav" aria-label="Loopaal">
@@ -101,9 +108,9 @@ export default function Page() {
           <a href="#journey">journey</a>
           <a href="#product">product</a>
           <a href="#safety">safety</a>
-          <a href="/sign-in">sign in</a>
+          <a href={signedIn ? "/dashboard" : "/sign-in"}>{signedIn ? "console" : "sign in"}</a>
         </div>
-        <a className="btn compact" href="/sign-up">Start setup</a>
+        <a className="btn compact" href={signedIn ? "/setup" : "/sign-up"}>{signedIn ? "Open setup" : "Start setup"}</a>
       </nav>
 
       <main className="landing convergence-landing">
@@ -116,7 +123,7 @@ export default function Page() {
               drafts, approvals, and customer-owned channel actions.
             </p>
             <div className="hero-actions">
-              <a className="btn primary" href="/sign-up">Start onboarding</a>
+              <a className="btn primary" href={signedIn ? "/setup" : "/sign-up"}>{signedIn ? "Continue setup" : "Start onboarding"}</a>
               <a className="btn" href="/dashboard">View workflow</a>
               <a className="btn" href="/setup">Open setup</a>
             </div>
@@ -195,7 +202,7 @@ export default function Page() {
           <div className="product-motion-copy">
             <p className="kicker">inside the product</p>
             <h2>States reveal themselves instead of hiding inside a black box.</h2>
-            <p>No separate judge mode. The same workflow is shown to customers: criteria, co-workers, drafts, approvals, and memory.</p>
+            <p>The same workflow is shown to every customer: criteria, co-workers, drafts, approvals, and memory.</p>
           </div>
 
           <div className="signal-board" aria-label="Loopaal product state preview">
